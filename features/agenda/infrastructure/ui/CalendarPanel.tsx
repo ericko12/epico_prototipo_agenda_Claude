@@ -1,6 +1,6 @@
 "use client";
-import { useRef, useState } from "react";
-import { Box, IconButton, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import { Box, Chip, IconButton, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { ChevronLeft, ChevronRight } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
@@ -73,6 +73,46 @@ const Legend = () => (
   </Stack>
 );
 
+const useCurrentTime = () => {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return now;
+};
+
+const CurrentTimeLine = ({ date, left = LABEL_W }: { date: Date; left?: number }) => {
+  const now = useCurrentTime();
+  if (isoDate(now) !== isoDate(date)) return null;
+
+  const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+  const offset = minuteOfDay - DAY_START;
+  if (offset < 0 || offset > DAY_HOURS * 60) return null;
+
+  return (
+    <Box sx={{ position: "absolute", left, right: 0, top: offset, zIndex: 6, pointerEvents: "none", display: "flex", alignItems: "center" }}>
+      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: ColorsEpico.ColorSecondary, transform: "translateX(-4px)" }} />
+      <Box sx={{ flex: 1, borderTop: `2px solid ${ColorsEpico.ColorSecondary}` }} />
+      <Typography
+        sx={{
+          position: "absolute",
+          left: 6,
+          top: -18,
+          px: 0.5,
+          bgcolor: ColorsEpico.ColorWhite,
+          color: ColorsEpico.ColorSecondary,
+          fontSize: FontSizesEnum.Omega,
+          fontWeight: FontWeightEnum.Bold,
+          borderRadius: "3px",
+        }}
+      >
+        Ahora · {hhmm(minuteOfDay)}
+      </Typography>
+    </Box>
+  );
+};
+
 const TimeLines = ({ left = LABEL_W }: { left?: number }) => (
   <>
     {Array.from({ length: DAY_HOURS * 2 + 1 }, (_, i) => {
@@ -128,17 +168,35 @@ const EventCard = ({ e, compact = false }: { e: AgendaEvent; compact?: boolean }
         "&:hover": { boxShadow: "0 2px 6px rgba(0,0,0,.12)" },
       }}
     >
-      <Typography
-        noWrap
-        sx={{
-          fontSize: compact ? FontSizesEnum.Omega : FontSizesEnum.Epsilon,
-          fontWeight: FontWeightEnum.Bold,
-          color: ColorsEpico.ColorDarkCharcoal,
-          lineHeight: compact ? 1.1 : 1.25,
-        }}
-      >
-        {e.time} · {a.eventLabel(e)}
-      </Typography>
+      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+        <Typography
+          noWrap
+          sx={{
+            minWidth: 0,
+            flex: 1,
+            fontSize: compact ? FontSizesEnum.Omega : FontSizesEnum.Epsilon,
+            fontWeight: FontWeightEnum.Bold,
+            color: ColorsEpico.ColorDarkCharcoal,
+            lineHeight: compact ? 1.1 : 1.25,
+          }}
+        >
+          {e.time} · {a.eventLabel(e)}
+        </Typography>
+        {e.routeSuggested && !a.hideDetail && (
+          <Chip
+            label="RS"
+            size="small"
+            title="Ruta sugerida"
+            sx={{
+              height: 18,
+              flexShrink: 0,
+              fontSize: FontSizesEnum.Omega,
+              fontWeight: FontWeightEnum.Bold,
+              "& .MuiChip-label": { px: 0.75 },
+            }}
+          />
+        )}
+      </Stack>
       {!compact && (
         <Typography noWrap sx={{ fontSize: FontSizesEnum.Omega, color: ColorsEpico.ColorBlack60, lineHeight: 1.15 }}>
           {a.hideDetail ? "Disponibilidad reservada" : `${e.address} · ${e.status}`}
@@ -195,6 +253,7 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
       sx={{ position: "relative", height: CALENDAR_HEIGHT, ml: 0, bgcolor: ColorsEpico.ColorWhite }}
     >
       <TimeLines />
+      <CurrentTimeLine date={selectedDate} />
       {Array.from({ length: DAY_HOURS + 1 }, (_, i) => (
         <Typography key={i} sx={{ position: "absolute", left: 8, top: i * HOUR_PX + 2, fontSize: FontSizesEnum.Omega, color: ColorsEpico.ColorNeutralGray, zIndex: 1 }}>
           {hhmm(DAY_START + i * 60)}
@@ -310,6 +369,7 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
                 }}
               >
                 <TimeLines left={0} />
+                <CurrentTimeLine date={d} left={0} />
                 {dropHint?.day === dayIndex && (
                   <Box sx={{ position: "absolute", left: 4, right: 4, top: dropHint.minute, height: 30, border: `2px dashed ${ColorsEpico.ColorSecondary}`, borderRadius: "4px", bgcolor: ColorsEpico.ColorSecondary100, zIndex: 5, pointerEvents: "none" }} />
                 )}
