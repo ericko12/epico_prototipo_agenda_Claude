@@ -2,13 +2,13 @@
 // Diálogos con la misma estructura que features/common/infrastructure/ui/dialog/ModalGeneric.tsx:
 // título en mayúsculas, ícono de cierre, botón "Cerrar/Cancelar" outlined y acción principal contained.
 import { useEffect, useState } from "react";
-import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
-import { FORM_ADDRESSES, FORM_CLIENTS } from "@/features/agenda/domain/agenda.data";
+import { clientId, normalize } from "@/features/agenda/domain/agenda.data";
 import { ActivityType } from "@/features/agenda/domain/agenda.types";
 import { EpicoLabel, Hint, statusVariant } from "./shared";
 
@@ -159,18 +159,32 @@ export const EventFormDialog = () => {
   const f = a.form;
   const [v, setV] = useState({ type: "visit" as ActivityType, client: FORM_CLIENTS[0], address: FORM_ADDRESSES[0], date: "2026-09-22", time: "10:30", duration: "30", quote: "", description: "" });
   const [error, setError] = useState<string | null>(null);
+  const [clientQuery, setClientQuery] = useState("");
   useEffect(() => {
     if (!f.open) return;
     const editing = f.editingId != null ? a.events.find((x) => x.id === f.editingId) : undefined;
+    const firstPortfolio = a.visiblePortfolio[0];
+    const initialClient = f.client ?? editing?.title ?? firstPortfolio?.[0] ?? "";
+    const initialAddress = f.address ?? editing?.address ?? a.visiblePortfolio.find((x) => x[0] === initialClient)?.[1] ?? firstPortfolio?.[1] ?? "";
     setV({
-      type: editing?.activityType ?? "visit", client: f.client ?? FORM_CLIENTS[0], address: f.address ?? FORM_ADDRESSES[0], date: editing?.date ?? "2026-09-22",
+      type: editing?.activityType ?? "visit", client: initialClient, address: initialAddress, date: editing?.date ?? "2026-09-22",
       time: f.time ?? "10:30", duration: String(editing?.duration ?? 30), quote: editing?.quote ?? "", description: editing?.description ?? "",
     });
+    setClientQuery("");
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.seed]);
-  const clients = Array.from(new Set([...FORM_CLIENTS, v.client]));
-  const addresses = Array.from(new Set([...FORM_ADDRESSES, v.address]));
+  const clientOptions = Array.from(new Set(a.visiblePortfolio.map((x) => x[0])));
+  const matchingClients = clientQuery.trim().length < 3
+    ? []
+    : clientOptions.filter((name) => {
+        const q = normalize(clientQuery.trim());
+        const related = a.visiblePortfolio.filter((x) => x[0] === name);
+        return normalize(name).includes(q)
+          || normalize(clientId(related[0])).includes(q)
+          || related.some((x) => normalize(x[1]).includes(q));
+      });
+  const addresses = Array.from(new Set(a.visiblePortfolio.filter((x) => x[0] === v.client).map((x) => x[1])));
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((p) => ({ ...p, [k]: e.target.value }));
   const save = () => setError(a.saveEvent({ ...v, duration: Number(v.duration) }));
 
@@ -188,8 +202,65 @@ export const EventFormDialog = () => {
           {v.type === "promo" && <Hint sx={{ mt: 0.5 }}>Este tipo requiere evidencia al completarse. La evidencia se adjunta en la ejecución/resultado, no en la planeación.</Hint>}
           <Hint sx={{ mt: 0.5 }}>Tipos ilustrativos del catálogo inicial compartido. La configuración avanzada queda fuera del MVP.</Hint>
         </Box>
-        <TextField select fullWidth size="small" label="Cliente / razón social" value={v.client} onChange={set("client")}>{clients.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}</TextField>
-        <TextField select fullWidth size="small" label="Dirección" value={v.address} onChange={set("address")}>{addresses.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}</TextField>
+        {v.type === "visit" && (
+          <Box>
+            <Autocomplete
+              fullWidth
+              size="small"
+              options={matchingClients}
+              value={clientOptions.includes(v.client) ? v.client : null}
+              inputValue={clientQuery}
+              onInputChange={(_, value, reason) => {
+                if (reason !== "reset") setClientQuery(value);
+              }}
+              onChange={(_, value) => {
+                const nextClient = value ?? "";
+                const nextAddress = a.visiblePortfolio.find((x) => x[0] === nextClient)?.[1] ?? "";
+                setV((p) => ({ ...p, client: nextClient, address: nextAddress }));
+                setClientQuery(value ?? "");
+              }}
+              filterOptions={(options) => options}
+              noOptionsText={clientQuery.trim().length < 3 ? "Escribe al menos 3 caracteres" : "No hay clientes visibles con ese criterio"}
+              getOptionLabel={(option) => option}
+              renderOption={(props, option) => {
+                const sample = a.visiblePortfolio.find((x) => x[0] === option);
+                return (
+                  <li {...props} key={option}>
+                    <Box>
+                      <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Medium}>{option}</Typography>
+                      <Typography fontSize={FontSizesEnum.Omega} color={ColorsEpico.ColorBlack60}>
+                        {clientId(sample)}{sample ? ` · ${sample[1]}` : ""}
+                      </Typography>
+                    </Box>
+                  </li>
+                );
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Buscar cliente"
+                  placeholder="ClienteID, razón social o dirección"
+                  required
+                  helperText="Busca desde 3 caracteres dentro de la cartera visible."
+                />
+              )}
+            />
+          </Box>
+        )}
+        {v.type === "visit" && (
+          <TextField
+            select
+            fullWidth
+            size="small"
+            label="Dirección"
+            value={v.address}
+            onChange={set("address")}
+            disabled={!v.client}
+            helperText={v.client && addresses.length > 1 ? "Selecciona la dirección que corresponde a la visita." : undefined}
+          >
+            {addresses.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+          </TextField>
+        )}
         <Stack direction="row" spacing={2}>
           <TextField fullWidth size="small" type="date" label="Fecha" value={v.date} onChange={set("date")} slotProps={{ inputLabel: { shrink: true } }} />
           <TextField fullWidth size="small" type="time" label="Hora" value={v.time} onChange={set("time")} slotProps={{ inputLabel: { shrink: true } }} />
