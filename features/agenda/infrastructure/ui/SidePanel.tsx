@@ -6,7 +6,6 @@ import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { clientId, clientKey, normalize } from "@/features/agenda/domain/agenda.data";
-import { RouteStart } from "@/features/agenda/domain/agenda.types";
 import { AGENDA_COLORS, GapMarker, Hint, SectionTitle } from "./shared";
 
 const outlinedBtn = { borderRadius: "4px", fontWeight: FontWeightEnum.Medium, color: ColorsEpico.ColorDarkCharcoal, borderColor: ColorsEpico.ColorGrayNeutral };
@@ -49,41 +48,54 @@ const Portfolio = () => {
 
 const RouteBox = () => {
   const a = useAgenda();
-  return (
-    <GapMarker label="Ruta sugerida: no existe en Épico. El mapa sí (Google Maps en Épico); falta motor de rutas." sx={{ mt: 2 }}>
-      <Box sx={{ p: 1.5, pt: { xs: 1.5, md: a.showGaps ? 6 : 1.5 }, border: `1px solid ${ColorsEpico.ColorGrayNeutral}`, borderRadius: "8px", bgcolor: ColorsEpico.ColorNeutro }}>
-        <SectionTitle sx={{ fontSize: FontSizesEnum.Delta }}>Ruta de visitas · propuesta</SectionTitle>
-        <Typography fontSize={FontSizesEnum.Epsilon} color={ColorsEpico.ColorBlack60}>Selecciona clientes y genera un orden sugerido.</Typography>
-        <TextField select fullWidth size="small" label="Punto de partida" value={a.routeStart} onChange={(e) => a.setRouteStart(e.target.value as RouteStart)} sx={{ mt: 1.5, bgcolor: ColorsEpico.ColorWhite }}>
-          <MenuItem value="current">Ubicación actual · simulada</MenuItem>
-          <MenuItem value="branch">Sucursal · DUMMY</MenuItem>
-          <MenuItem value="first">Primera visita seleccionada</MenuItem>
-        </TextField>
-        <Button fullWidth variant="outlined" disabled={!a.canEdit} onClick={() => a.suggestRoute()} sx={{ ...outlinedBtn, mt: 1, bgcolor: ColorsEpico.ColorWhite }}>Sugerir ruta</Button>
-        {a.routeMsg && <Hint sx={{ mt: 1 }}>{a.routeMsg}</Hint>}
-        {a.routePlan && (
-          <Box sx={{ mt: 1 }}>
-            <Hint sx={{ py: 0.5 }}><b>Ruta recalculada</b> · Punto de partida: {a.routeStartInfo(a.routeStart).label}</Hint>
-            {a.routePlan.map((x, i) => (
-              <Stack key={clientKey(x.c)} direction="row" alignItems="center" gap={1} sx={{ py: 1, borderBottom: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, "&:last-of-type": { borderBottom: 0 } }}>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography fontSize={FontSizesEnum.Epsilon} fontWeight={FontWeightEnum.Bold}>{i + 1}. {x.c[0]}</Typography>
-                  <Typography fontSize={FontSizesEnum.Omega}>{x.hh} sugerido · {x.c[1]}</Typography>
-                  <Typography fontSize={FontSizesEnum.Omega} color={ColorsEpico.ColorBlack60}>{i === 0 ? "Traslado desde punto de partida" : "Traslado ilustrativo"}: {x.travel} min</Typography>
-                </Box>
-                <Stack>
-                  <IconButton size="small" aria-label="Subir" disabled={i === 0} onClick={() => a.moveStop(i, -1)}><ArrowUpward fontSize="inherit" /></IconButton>
-                  <IconButton size="small" aria-label="Bajar" disabled={i === a.routePlan!.length - 1} onClick={() => a.moveStop(i, 1)}><ArrowDownward fontSize="inherit" /></IconButton>
-                </Stack>
-              </Stack>
-            ))}
-            <Button fullWidth variant="contained" onClick={a.applyRoute} sx={{ mt: 1, borderRadius: "4px", fontWeight: FontWeightEnum.Medium }}>Agregar propuesta a Agenda</Button>
-            <Hint sx={{ mt: 0.5 }}>La ruta es una sugerencia. Cambiar el punto de partida vuelve a calcular orden, traslado y horario.</Hint>
-          </Box>
+  const inOrdering = !!a.routePlan;
+
+  if (!inOrdering) {
+    return (
+      <Box sx={{ position: "sticky", bottom: 12, zIndex: 4, mt: 1 }}>
+        {a.routeSel.length >= 2 && (
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={a.suggestRoute}
+            sx={{ borderRadius: "4px", fontWeight: FontWeightEnum.Medium, boxShadow: 3 }}
+          >
+            Sugerir ruta
+          </Button>
         )}
-        <Hint sx={{ mt: 1 }}>Simulación: usa datos DUMMY y distancias ilustrativas. No considera tráfico ni sustituye un motor de rutas.</Hint>
+        {a.routeMsg && <Hint sx={{ mt: 0.75 }}>{a.routeMsg}</Hint>}
       </Box>
-    </GapMarker>
+    );
+  }
+
+  return (
+    <Box sx={{ mt: 1.5, p: 1.5, border: `1px solid ${ColorsEpico.ColorGrayNeutral}`, borderRadius: "8px", bgcolor: ColorsEpico.ColorNeutro }}>
+      <SectionTitle sx={{ fontSize: FontSizesEnum.Delta }}>Orden de visita</SectionTitle>
+      <Hint>La primera posición define el inicio de la ruta. Reordena los destinos antes de agregarlos a Agenda.</Hint>
+
+      <Box sx={{ mt: 1 }}>
+        {a.routePlan.map((x, i) => (
+          <Stack key={clientKey(x.c)} direction="row" alignItems="center" gap={1} sx={{ py: 1, borderBottom: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, "&:last-of-type": { borderBottom: 0 } }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography fontSize={FontSizesEnum.Epsilon} fontWeight={FontWeightEnum.Bold}>
+                {i + 1}. {x.c[0]} {i === 0 ? "· Inicio" : ""}
+              </Typography>
+              <Typography fontSize={FontSizesEnum.Omega}>{x.hh} sugerido · {x.c[1]}</Typography>
+              {i > 0 && <Typography fontSize={FontSizesEnum.Omega} color={ColorsEpico.ColorBlack60}>Traslado ilustrativo: {x.travel} min</Typography>}
+            </Box>
+            <Stack>
+              <IconButton size="small" aria-label="Subir" disabled={i === 0} onClick={() => a.moveStop(i, -1)}><ArrowUpward fontSize="inherit" /></IconButton>
+              <IconButton size="small" aria-label="Bajar" disabled={i === a.routePlan!.length - 1} onClick={() => a.moveStop(i, 1)}><ArrowDownward fontSize="inherit" /></IconButton>
+            </Stack>
+          </Stack>
+        ))}
+      </Box>
+
+      <Stack direction="row" spacing={1} sx={{ position: "sticky", bottom: 12, pt: 1.5, bgcolor: ColorsEpico.ColorNeutro, zIndex: 4 }}>
+        <Button fullWidth variant="outlined" onClick={a.cancelRouteSuggestion} sx={outlinedBtn}>Cancelar sugerencia</Button>
+        <Button fullWidth variant="contained" onClick={a.applyRoute} sx={{ borderRadius: "4px", fontWeight: FontWeightEnum.Medium }}>Agregar ruta</Button>
+      </Stack>
+    </Box>
   );
 };
 
@@ -105,11 +117,17 @@ export const SidePanel = () => {
         fullWidth size="small" placeholder="Cliente ID, razón social o dirección" value={a.search} onChange={(e) => a.setSearch(e.target.value)} sx={{ mt: 1.5 }}
         slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
       />
-      <Typography fontSize={FontSizesEnum.Omega} color={selCount ? ColorsEpico.ColorSecondary : ColorsEpico.ColorBlack60} fontWeight={selCount ? FontWeightEnum.Bold : 500} sx={{ mt: 1 }}>
-        {selCount ? `Seleccionados para ruta: ${selCount}` : "Sin clientes seleccionados"}
-      </Typography>
-      <Portfolio />
-      <RouteBox />
+      {!a.routePlan ? (
+        <>
+          <Typography fontSize={FontSizesEnum.Omega} color={selCount ? ColorsEpico.ColorSecondary : ColorsEpico.ColorBlack60} fontWeight={selCount ? FontWeightEnum.Bold : 500} sx={{ mt: 1 }}>
+            {selCount ? `Seleccionados para ruta: ${selCount}` : "Sin clientes seleccionados"}
+          </Typography>
+          <Portfolio />
+          <RouteBox />
+        </>
+      ) : (
+        <RouteBox />
+      )}
 
       <Hint sx={{ mt: 2 }}>Los horarios se muestran como hora local del asesor en esta simulación. El manejo definitivo de zona horaria sigue pendiente de validación técnica.</Hint>
 
