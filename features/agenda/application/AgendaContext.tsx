@@ -39,7 +39,7 @@ function useAgendaState() {
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<AgendaEvent | null>(null);
   const [snack, setSnack] = useState<Snack>(null);
-  const [showGaps, setShowGaps] = useState(true);
+  const [showGaps, setShowGaps] = useState(false);
 
   const profile = profiles[owner];
   const events = profile.events;
