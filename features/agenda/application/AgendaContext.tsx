@@ -5,7 +5,7 @@
 // para que la versión sintética no dependa del store real.
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import {
-  AgendaEvent, AgendaTask, Client, DetailVisibility, OwnerId, OwnerProfile, Role, RouteStart, Scope, SummaryFilter, View,
+  AgendaEvent, AgendaTask, Client, DetailVisibility, OwnerId, OwnerProfile, Role, Scope, SummaryFilter, View,
 } from "@/features/agenda/domain/agenda.types";
 import { clientKey, endMin, hhmm, initialProfiles, mins, nowMx, ROLE_EXPLANATION } from "@/features/agenda/domain/agenda.data";
 
@@ -29,7 +29,6 @@ function useAgendaState() {
   const [portfolioScope, setPortfolioScope] = useState<"own" | "team">("team");
   const [search, setSearch] = useState("");
   const [routeSel, setRouteSel] = useState<string[]>([]);
-  const [routeStart, setRouteStartRaw] = useState<RouteStart>("current");
   const [routePlan, setRoutePlan] = useState<RouteStop[] | null>(null);
   const [routeMsg, setRouteMsg] = useState("");
   const [scenarioMsg, setScenarioMsg] = useState("");
@@ -81,44 +80,88 @@ function useAgendaState() {
   }, [role, portfolioScope, scope, clients, teamClients]);
   const toggleRouteSel = (key: string) => setRouteSel((s) => (s.includes(key) ? s.filter((k) => k !== key) : [...s, key]));
 
-  // ---------- ruta sugerida (vecino más cercano, distancias ilustrativas) ----------
-  const routeStartInfo = (mode: RouteStart) => mode === "branch" ? { label: "Sucursal · DUMMY", coord: [2, 2] } : mode === "first" ? { label: "Primera visita seleccionada", coord: null } : { label: "Ubicación actual · simulada", coord: [0, 2] };
-  const formatRoute = (order: Client[], mode: RouteStart): RouteStop[] => {
-    let cursor = 8 * 60; const start = routeStartInfo(mode);
+  // ---------- ruta sugerida (primer destino = punto de partida) ----------
+  const formatRoute = (order: Client[]): RouteStop[] => {
+    let cursor = 8 * 60;
     return order.map((c, i) => {
-      let travel: number;
-      if (i === 0) travel = mode === "first" ? 0 : Math.max(5, Math.round(Math.hypot(c[2] - start.coord![0], c[3] - start.coord![1]) * 10));
-      else travel = Math.max(10, Math.round(Math.hypot(c[2] - order[i - 1][2], c[3] - order[i - 1][3]) * 10));
-      cursor += travel; const hh = hhmm(cursor); cursor += 30; return { c, hh, travel };
+      const travel = i === 0 ? 0 : Math.max(10, Math.round(Math.hypot(c[2] - order[i - 1][2], c[3] - order[i - 1][3]) * 10));
+      cursor += travel;
+      const hh = hhmm(cursor);
+      cursor += 30;
+      return { c, hh, travel };
     });
   };
-  const routeOrder = (selected: Client[], mode: RouteStart) => {
-    const pool = selected.slice(); const order: Client[] = []; let cur = mode === "branch" ? [2, 2] : [0, 2];
-    if (mode === "first" && pool.length) {
-      let idx = pool.findIndex((c) => clientKey(c) === routeSel[0]); if (idx < 0) idx = 0;
-      const first = pool.splice(idx, 1)[0]; order.push(first); cur = [first[2], first[3]];
+
+  const routeOrder = (selected: Client[]) => {
+    if (!selected.length) return [];
+    const firstKey = routeSel[0];
+    let firstIndex = selected.findIndex((c) => clientKey(c) === firstKey);
+    if (firstIndex < 0) firstIndex = 0;
+
+    const pool = selected.slice();
+    const first = pool.splice(firstIndex, 1)[0];
+    const order: Client[] = [first];
+    let cur = [first[2], first[3]];
+
+    while (pool.length) {
+      pool.sort((a, b) => Math.hypot(a[2] - cur[0], a[3] - cur[1]) - Math.hypot(b[2] - cur[0], b[3] - cur[1]));
+      const next = pool.shift()!;
+      order.push(next);
+      cur = [next[2], next[3]];
     }
-    while (pool.length) { pool.sort((a, b) => Math.hypot(a[2] - cur[0], a[3] - cur[1]) - Math.hypot(b[2] - cur[0], b[3] - cur[1])); const n = pool.shift()!; order.push(n); cur = [n[2], n[3]]; }
     return order;
   };
-  const suggestRoute = (mode: RouteStart = routeStart) => {
+
+  const suggestRoute = () => {
     if (!canEdit) return;
     const selected = [...clients, ...teamClients].filter((c, i, arr) => routeSel.includes(clientKey(c)) && arr.findIndex((x) => clientKey(x) === clientKey(c)) === i);
-    if (selected.length < 2) { setRoutePlan(null); setRouteMsg("Selecciona al menos 2 clientes para sugerir una ruta."); return; }
-    setRouteMsg(""); setRoutePlan(formatRoute(routeOrder(selected, mode), mode));
+    if (selected.length < 2) {
+      setRoutePlan(null);
+      setRouteMsg("Selecciona al menos 2 clientes para sugerir una ruta.");
+      return;
+    }
+    setRouteMsg("");
+    setRoutePlan(formatRoute(routeOrder(selected)));
   };
-  const setRouteStart = (m: RouteStart) => { setRouteStartRaw(m); if (routePlan) suggestRoute(m); };
+
+  const cancelRouteSuggestion = () => {
+    setRoutePlan(null);
+    setRouteMsg("");
+  };
+
   const moveStop = (i: number, d: number) => {
-    if (!routePlan) return; const j = i + d; if (j < 0 || j >= routePlan.length) return;
-    const arr = routePlan.map((x) => x.c); [arr[i], arr[j]] = [arr[j], arr[i]]; setRoutePlan(formatRoute(arr, routeStart));
+    if (!routePlan) return;
+    const j = i + d;
+    if (j < 0 || j >= routePlan.length) return;
+    const arr = routePlan.map((x) => x.c);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    setRoutePlan(formatRoute(arr));
   };
+
   const applyRoute = () => {
     if (!routePlan) return;
-    const proposed: AgendaEvent[] = routePlan.map((x, i) => ({ id: `route-${Date.now()}-${i}`, title: x.c[0], address: x.c[1], time: x.hh, duration: 30, kind: "planned", status: "Programada", routeSuggested: true, activityType: "visit" }));
-    const invalid = proposed.find((e, i) => events.some((x) => x.kind === "planned" && !x.absence && x.status !== "Cancelada" && x.activityType !== "internal" && overlaps(e, x)) || proposed.slice(0, i).some((x) => overlaps(e, x)));
-    if (invalid) { setSnack({ severity: "error", msg: `La ruta no se guardó. Existe un traslape con ${invalid.title} a las ${invalid.time}. Corrige la propuesta completa.` }); return; }
+    const proposed: AgendaEvent[] = routePlan.map((x, i) => ({
+      id: `route-${Date.now()}-${i}`,
+      title: x.c[0],
+      address: x.c[1],
+      time: x.hh,
+      duration: 30,
+      kind: "planned",
+      status: "Programada",
+      routeSuggested: true,
+      activityType: "visit",
+    }));
+    const invalid = proposed.find((e, i) =>
+      events.some((x) => x.kind === "planned" && !x.absence && x.status !== "Cancelada" && x.activityType !== "internal" && overlaps(e, x))
+      || proposed.slice(0, i).some((x) => overlaps(e, x))
+    );
+    if (invalid) {
+      setSnack({ severity: "error", msg: `La ruta no se guardó. Existe un traslape con ${invalid.title} a las ${invalid.time}. Corrige la propuesta completa.` });
+      return;
+    }
     updateEvents((evs) => [...evs, ...proposed]);
-    setSnack({ severity: "success", msg: `Se agregaron ${proposed.length} visitas sugeridas a la Agenda.` });
+    setSnack({ severity: "success", msg: `Se agregaron ${proposed.length} visitas de la ruta a la Agenda.` });
+    resetRoute();
   };
 
   // ---------- resumen / desviaciones ----------
@@ -297,8 +340,8 @@ function useAgendaState() {
   return {
     profiles, owner, setOwner, profile, events, tasks, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
     view, setView, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
-    canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, routeStart, setRouteStart, routeStartInfo,
-    routePlan, routeMsg, suggestRoute, moveStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
+    canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel,
+    routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
     cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
     scenarioMsg, loadOpenVisitScenario, openVisits, regularize, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
   };
