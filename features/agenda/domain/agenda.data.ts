@@ -15,12 +15,12 @@ const luisTasks: AgendaTask[] = [
   { id: 3, subject: "Validar exhibidor POP", detail: "Registrar evidencia de implementación de material.", client: "Autopartes del Bajío", due: "2026-09-25", owner: "Luis Galvan", origin: "Manual", status: "Pendiente" },
 ];
 const luisEvents: AgendaEvent[] = [
-  { id: 1, title: "Refaccionaria El Volante", address: "Av. Demo Vallarta 1200 · Guadalajara, Jal. · DUMMY", time: "08:30", duration: 30, kind: "planned", status: "Programada" },
-  { id: 2, title: "Refaccionaria El Volante", address: "Av. Demo Vallarta 1200 · Guadalajara, Jal. · DUMMY", time: "09:12", duration: 34, kind: "realized", status: "Check-out realizado", planned: "08:30" },
-  { id: 3, title: "Autopartes del Bajío", address: "Av. Demo México 2450 · Guadalajara, Jal. · DUMMY", time: "10:00", duration: 30, kind: "planned", status: "Programada" },
-  { id: 4, title: "Frenos Lara", address: "Calz. Demo Independencia 1800 · Guadalajara, Jal. · DUMMY", time: "11:30", duration: 30, kind: "planned", status: "Programada" },
-  { id: 5, title: "Frenos Lara", address: "Calz. Demo Independencia 1800 · Guadalajara, Jal. · DUMMY", time: "12:05", duration: 25, kind: "realized", status: "Check-out realizado", planned: "11:30" },
-  { id: 6, title: "Junta interna Guadalajara", address: "Sin cliente", time: "14:00", duration: 60, kind: "planned", status: "Programada" },
+  { id: 1, title: "Refaccionaria El Volante", address: "Av. Demo Vallarta 1200 · Guadalajara, Jal. · DUMMY", time: "08:30", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+  { id: 2, title: "Refaccionaria El Volante", address: "Av. Demo Vallarta 1200 · Guadalajara, Jal. · DUMMY", time: "09:12", duration: 34, kind: "realized", status: "Check-out realizado", planned: "08:30", activityType: "visit" },
+  { id: 3, title: "Autopartes del Bajío", address: "Av. Demo México 2450 · Guadalajara, Jal. · DUMMY", time: "10:00", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+  { id: 4, title: "Frenos Lara", address: "Calz. Demo Independencia 1800 · Guadalajara, Jal. · DUMMY", time: "11:30", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+  { id: 5, title: "Frenos Lara", address: "Calz. Demo Independencia 1800 · Guadalajara, Jal. · DUMMY", time: "12:05", duration: 25, kind: "realized", status: "Check-out realizado", planned: "11:30", activityType: "visit" },
+  { id: 6, title: "Junta interna Guadalajara", address: "Sin cliente", time: "14:00", duration: 60, kind: "planned", status: "Programada", activityType: "internal" },
 ];
 
 export const initialProfiles = (): Record<OwnerId, OwnerProfile> => ({
@@ -34,10 +34,10 @@ export const initialProfiles = (): Record<OwnerId, OwnerProfile> => ({
       ["Refacciones Minerva", "Av. Demo Vallarta 3100 · Guadalajara, Jal. · DUMMY", 1, 3],
     ],
     events: [
-      { id: 101, title: "Llantas Nova", address: "Av. Demo Patria 2100 · Zapopan, Jal. · DUMMY", time: "09:00", duration: 30, kind: "planned", status: "Programada" },
-      { id: 102, title: "Llantas Nova", address: "Av. Demo Patria 2100 · Zapopan, Jal. · DUMMY", time: "09:18", duration: 28, kind: "realized", status: "Check-out realizado", planned: "09:00" },
-      { id: 103, title: "Motores Central", address: "Av. Demo Américas 1400 · Guadalajara, Jal. · DUMMY", time: "11:00", duration: 30, kind: "planned", status: "Programada" },
-      { id: 104, title: "Servicio Atlas", address: "Av. Demo Federalismo 900 · Guadalajara, Jal. · DUMMY", time: "15:00", duration: 30, kind: "planned", status: "Programada" },
+      { id: 101, title: "Llantas Nova", address: "Av. Demo Patria 2100 · Zapopan, Jal. · DUMMY", time: "09:00", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+      { id: 102, title: "Llantas Nova", address: "Av. Demo Patria 2100 · Zapopan, Jal. · DUMMY", time: "09:18", duration: 28, kind: "realized", status: "Check-out realizado", planned: "09:00", activityType: "visit" },
+      { id: 103, title: "Motores Central", address: "Av. Demo Américas 1400 · Guadalajara, Jal. · DUMMY", time: "11:00", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+      { id: 104, title: "Servicio Atlas", address: "Av. Demo Federalismo 900 · Guadalajara, Jal. · DUMMY", time: "15:00", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
       { id: 105, title: "Vacaciones autorizadas", address: "Todo el día", time: "08:00", duration: 720, kind: "planned", status: "Ausencia", absence: true },
     ],
     tasks: [
@@ -54,11 +54,11 @@ export const initialProfiles = (): Record<OwnerId, OwnerProfile> => ({
       ["Ruedas Tapatías", "Av. Demo Río Nilo 1700 · Tonalá, Jal. · DUMMY", 5, 3],
     ],
     events: [
-      { id: 201, title: "Autocentro Sur", address: "Av. Demo Colón 4100 · Guadalajara, Jal. · DUMMY", time: "08:00", duration: 30, kind: "planned", status: "Programada" },
-      { id: 202, title: "Suspensiones GDL", address: "Av. Demo 8 de Julio 2600 · Guadalajara, Jal. · DUMMY", time: "10:30", duration: 30, kind: "planned", status: "Programada" },
-      { id: 203, title: "Partes Oriente", address: "Av. Demo Revolución 3300 · Guadalajara, Jal. · DUMMY", time: "13:30", duration: 30, kind: "planned", status: "Programada" },
-      { id: 204, title: "Partes Oriente", address: "Av. Demo Revolución 3300 · Guadalajara, Jal. · DUMMY", time: "14:05", duration: 32, kind: "realized", status: "Check-out realizado", planned: "13:30" },
-      { id: 205, title: "Ruedas Tapatías", address: "Av. Demo Río Nilo 1700 · Tonalá, Jal. · DUMMY", time: "16:20", duration: 30, kind: "realized", status: "Check-in activo", planned: "16:00", openSince: "16:20" },
+      { id: 201, title: "Autocentro Sur", address: "Av. Demo Colón 4100 · Guadalajara, Jal. · DUMMY", time: "08:00", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+      { id: 202, title: "Suspensiones GDL", address: "Av. Demo 8 de Julio 2600 · Guadalajara, Jal. · DUMMY", time: "10:30", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+      { id: 203, title: "Partes Oriente", address: "Av. Demo Revolución 3300 · Guadalajara, Jal. · DUMMY", time: "13:30", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+      { id: 204, title: "Partes Oriente", address: "Av. Demo Revolución 3300 · Guadalajara, Jal. · DUMMY", time: "14:05", duration: 32, kind: "realized", status: "Check-out realizado", planned: "13:30", activityType: "visit" },
+      { id: 205, title: "Ruedas Tapatías", address: "Av. Demo Río Nilo 1700 · Tonalá, Jal. · DUMMY", time: "16:20", duration: 30, kind: "realized", status: "Check-in activo", planned: "16:00", openSince: "16:20", activityType: "visit" },
     ],
     tasks: [
       { id: 201, subject: "Validar devolución", detail: "Revisar folio con cliente.", client: "Autocentro Sur", due: "2026-09-22", owner: "Arturo Hernández", origin: "Visita", status: "Pendiente" },
@@ -74,10 +74,10 @@ export const initialProfiles = (): Record<OwnerId, OwnerProfile> => ({
       ["Motores del Centro", "Av. Demo Alcalde 1850 · Guadalajara, Jal. · DUMMY", 2, 4],
     ],
     events: [
-      { id: 301, title: "Distribuidora Oriente", address: "Av. Demo Revolución 2100 · Guadalajara, Jal. · DUMMY", time: "08:30", duration: 30, kind: "planned", status: "Programada" },
-      { id: 302, title: "Servicio Miravalle", address: "Av. Demo Gobernador Curiel 3200 · Guadalajara, Jal. · DUMMY", time: "10:30", duration: 30, kind: "planned", status: "Programada" },
-      { id: 303, title: "Autopartes Tlaquepaque", address: "Av. Demo Niños Héroes 1500 · Tlaquepaque, Jal. · DUMMY", time: "13:00", duration: 30, kind: "planned", status: "Programada" },
-      { id: 304, title: "Distribuidora Oriente", address: "Av. Demo Revolución 2100 · Guadalajara, Jal. · DUMMY", time: "08:48", duration: 31, kind: "realized", status: "Check-out realizado", planned: "08:30" },
+      { id: 301, title: "Distribuidora Oriente", address: "Av. Demo Revolución 2100 · Guadalajara, Jal. · DUMMY", time: "08:30", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+      { id: 302, title: "Servicio Miravalle", address: "Av. Demo Gobernador Curiel 3200 · Guadalajara, Jal. · DUMMY", time: "10:30", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+      { id: 303, title: "Autopartes Tlaquepaque", address: "Av. Demo Niños Héroes 1500 · Tlaquepaque, Jal. · DUMMY", time: "13:00", duration: 30, kind: "planned", status: "Programada", activityType: "visit" },
+      { id: 304, title: "Distribuidora Oriente", address: "Av. Demo Revolución 2100 · Guadalajara, Jal. · DUMMY", time: "08:48", duration: 31, kind: "realized", status: "Check-out realizado", planned: "08:30", activityType: "visit" },
     ],
     tasks: [
       { id: 301, subject: "Confirmar cotización", detail: "Revisar precios con Comercial.", client: "Distribuidora Oriente", due: "2026-09-23", owner: "Yuridia Maribel Torres", origin: "Visita", status: "Pendiente" },
