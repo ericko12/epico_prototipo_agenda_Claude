@@ -71,7 +71,7 @@ const RouteBox = () => {
   return (
     <Box sx={{ mt: 1.5, p: 1.5, border: `1px solid ${ColorsEpico.ColorGrayNeutral}`, borderRadius: "8px", bgcolor: ColorsEpico.ColorNeutro }}>
       <SectionTitle sx={{ fontSize: FontSizesEnum.Delta }}>Orden de visita</SectionTitle>
-      <Hint>La primera posición define el inicio de la ruta. Reordena los destinos antes de agregarlos a Agenda.</Hint>
+      <Hint>La primera posición define el inicio. Los horarios se sugieren según la disponibilidad futura del día visible en Agenda; hoy nunca propone horarios anteriores a la hora actual.</Hint>
 
       <Box sx={{ mt: 1 }}>
         {a.routePlan!.map((x, i) => (
