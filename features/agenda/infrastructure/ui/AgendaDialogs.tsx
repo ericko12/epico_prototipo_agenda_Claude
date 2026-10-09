@@ -2,8 +2,9 @@
 // Diálogos con la misma estructura que features/common/infrastructure/ui/dialog/ModalGeneric.tsx:
 // título en mayúsculas, ícono de cierre, botón "Cerrar/Cancelar" outlined y acción principal contained.
 import { useEffect, useState } from "react";
-import { Alert, Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
@@ -14,6 +15,37 @@ import { EpicoLabel, Hint, statusVariant } from "./shared";
 
 const closeBtnSx = { borderRadius: "4px", minHeight: "32px", fontWeight: FontWeightEnum.Medium, color: ColorsEpico.ColorDarkCharcoal, borderColor: ColorsEpico.ColorGrayNeutral, fontSize: FontSizesEnum.Gamma };
 const saveBtnSx = { borderRadius: "4px", minHeight: "32px", fontWeight: FontWeightEnum.Medium, background: ColorsEpico.ColorPrimary, fontSize: FontSizesEnum.Gamma };
+
+const ButtonEdit = ({ onClick }: { onClick: () => void }) => (
+  <Button
+    variant="outlined"
+    size="small"
+    startIcon={<EditOutlinedIcon />}
+    onClick={onClick}
+    sx={{
+      borderRadius: "4px",
+      minHeight: "32px",
+      fontWeight: FontWeightEnum.Medium,
+      fontSize: FontSizesEnum.Gamma,
+      textTransform: "none",
+    }}
+  >
+    Editar
+  </Button>
+);
+
+const destructiveBtnSx = {
+  borderRadius: "4px",
+  minHeight: "32px",
+  fontWeight: FontWeightEnum.Medium,
+  fontSize: FontSizesEnum.Gamma,
+  textTransform: "none",
+};
+
+const activityTypeLabel = (type?: ActivityType) =>
+  type === "promo" ? "Entrega de material promocional" :
+  type === "internal" ? "Otra actividad" :
+  "Visita a cliente";
 
 const EpicoDialog = ({ open, title, onClose, children, actions, maxWidth = "sm" }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode; actions: React.ReactNode; maxWidth?: "xs" | "sm" | "md" }) => {
   const theme = useTheme();
@@ -72,13 +104,13 @@ export const EventDetailDialog = () => {
       onClose={close}
       maxWidth="sm"
       actions={
-        <>
-          {editable && <Button variant="outlined" color="error" onClick={() => a.setCancelTarget(e)} sx={{ ...closeBtnSx, color: undefined, borderColor: undefined, mr: "auto" }}>Cancelar evento</Button>}
-          <Button variant="outlined" onClick={close} sx={closeBtnSx}>Cerrar</Button>
-          {editable && <Button variant="contained" onClick={() => a.openEdit(e)} sx={saveBtnSx}>Editar / reprogramar</Button>}
-          {canCheckIn && <Button variant="contained" onClick={() => a.startCheckIn(e)} sx={saveBtnSx}>Iniciar Check-in</Button>}
-          {canCheckOut && <Button variant="contained" onClick={doCheckOut} sx={saveBtnSx}>Realizar Check-out</Button>}
-        </>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: "100%" }}>
+          <Button variant="outlined" onClick={close} sx={closeBtnSx}>Cancelar</Button>
+          <Box>
+            {canCheckIn && <Button variant="contained" onClick={() => a.startCheckIn(e)} sx={saveBtnSx}>Iniciar Check-in</Button>}
+            {canCheckOut && <Button variant="contained" onClick={doCheckOut} sx={saveBtnSx}>Realizar Check-out</Button>}
+          </Box>
+        </Stack>
       }
     >
       {a.detail.visitNowCreated && (
@@ -91,6 +123,21 @@ export const EventDetailDialog = () => {
         <EpicoLabel variant={statusVariant(e.status)}>{e.status}</EpicoLabel>
         {e.routeSuggested && <EpicoLabel variant="eta">Ruta sugerida</EpicoLabel>}
       </Stack>
+
+      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "stretch", sm: "center" }} justifyContent="space-between" gap={1.5} sx={{ mt: 2 }}>
+        <Box>
+          <Typography fontSize={FontSizesEnum.Epsilon} fontWeight={FontWeightEnum.Bold} color={ColorsEpico.ColorDarkCharcoal}>Tipo de visita</Typography>
+          <Typography fontSize={FontSizesEnum.Delta} color={ColorsEpico.ColorBlack60}>{activityTypeLabel(e.activityType)}</Typography>
+        </Box>
+        {editable && (
+          <Stack direction="row" spacing={1} justifyContent={{ xs: "flex-start", sm: "flex-end" }}>
+            <ButtonEdit onClick={() => a.openEdit(e)} />
+            <Button variant="outlined" color="error" onClick={() => a.setCancelTarget(e)} sx={destructiveBtnSx}>Cancelar evento</Button>
+          </Stack>
+        )}
+      </Stack>
+
+      <Divider sx={{ my: 2 }} />
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, columnGap: 2, mt: 1 }}>
         <Fact label="Dirección" value={e.address} />
         <Fact label={`Hora ${e.kind === "planned" ? "programada" : "real"}`} value={`${e.time} · ${e.duration} min`} />
