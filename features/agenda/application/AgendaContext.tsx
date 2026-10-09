@@ -34,7 +34,7 @@ function useAgendaState() {
   const [routeMsg, setRouteMsg] = useState("");
   const [scenarioMsg, setScenarioMsg] = useState("");
   const [closeResult, setCloseResult] = useState<{ type: "info" | "ok"; text: string } | null>(null);
-  const [form, setForm] = useState<FormState>({ open: false, editingId: null, title: "Nueva visita", startAfterCreate: false, seed: 0 });
+  const [form, setForm] = useState<FormState>({ open: false, editingId: null, title: "Nuevo evento", startAfterCreate: false, seed: 0 });
   const [detail, setDetail] = useState<DetailState>({ event: null });
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<AgendaEvent | null>(null);
@@ -145,7 +145,7 @@ function useAgendaState() {
   // ---------- eventos: alta / edición / cancelación ----------
   const openForm = (opts: Partial<Pick<FormState, "client" | "address" | "time" | "startAfterCreate" | "title">> = {}) => {
     if (!canEdit) return;
-    setForm({ open: true, editingId: null, title: opts.title ?? "Nueva visita", client: opts.client, address: opts.address, time: opts.time, startAfterCreate: !!opts.startAfterCreate, seed: Date.now() });
+    setForm({ open: true, editingId: null, title: opts.title ?? "Nuevo evento", client: opts.client, address: opts.address, time: opts.time, startAfterCreate: !!opts.startAfterCreate, seed: Date.now() });
   };
   const openEdit = (e: AgendaEvent) => { setDetail({ event: null }); setForm({ open: true, editingId: e.id, title: "Editar / reprogramar visita", client: e.title, address: e.address, time: e.time, startAfterCreate: false, seed: Date.now() }); };
   const closeForm = () => setForm((f) => ({ ...f, open: false, editingId: null }));
