@@ -10,7 +10,7 @@ import { DAY_HOURS, DAY_START, hhmm, mins } from "@/features/agenda/domain/agend
 import { AgendaEvent, View } from "@/features/agenda/domain/agenda.types";
 import { AGENDA_COLORS, GapMarker } from "./shared";
 
-const INITIAL_DATE = new Date(2026, 8, 22);
+const INITIAL_DATE = new Date();
 const BASE_EVENT_DATE = "2026-09-22";
 const HOUR_PX = 60;
 const LABEL_W = 56;
@@ -431,9 +431,14 @@ const MonthView = () => {
 };
 
 export const CalendarPanel = () => {
-  const { view, setView } = useAgenda();
+  const a = useAgenda();
+  const { view, setView } = a;
   const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
   const title = periodTitle(view, selectedDate);
+
+  useEffect(() => {
+    a.setSelectedDate(isoDate(selectedDate));
+  }, [a.setSelectedDate, selectedDate]);
 
   return (
     <Box>
