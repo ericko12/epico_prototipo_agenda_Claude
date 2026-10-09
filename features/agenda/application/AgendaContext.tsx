@@ -173,6 +173,40 @@ function useAgendaState() {
   };
   const canEditEvent = (e: AgendaEvent) => canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre automático"].includes(e.status);
 
+  const rescheduleEvent = (e: AgendaEvent, date: string, time: string): boolean => {
+    if (!canEditEvent(e)) {
+      setSnack({ severity: "warning", msg: "Este evento ya inició ejecución o no puede reprogramarse." });
+      return false;
+    }
+
+    const candidate = { ...e, date, time };
+    const conflict = candidate.activityType === "visit"
+      ? events.find((x) =>
+          x.id !== candidate.id &&
+          x.kind === "planned" &&
+          !x.absence &&
+          x.status !== "Cancelada" &&
+          x.activityType === "visit" &&
+          (x.date ?? "2026-09-22") === date &&
+          overlaps(candidate, x)
+        )
+      : null;
+
+    if (conflict) {
+      setSnack({ severity: "error", msg: `No se puede mover la visita. Se empalma con ${conflict.title} (${conflict.time}).` });
+      return false;
+    }
+
+    const updated: AgendaEvent = {
+      ...candidate,
+      modifiedBy: actorName(),
+      modifiedAt: nowMx(),
+    };
+    updateEvents((evs) => evs.map((x) => (x.id === e.id ? updated : x)));
+    setSnack({ severity: "success", msg: `Evento reprogramado a ${date} · ${time}.` });
+    return true;
+  };
+
   // ---------- ejecución de visita: Check-in / Check-out ----------
   const canExecuteVisit = (e: AgendaEvent) =>
     role === "advisor" &&
@@ -265,7 +299,7 @@ function useAgendaState() {
     view, setView, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, routeStart, setRouteStart, routeStartInfo,
     routePlan, routeMsg, suggestRoute, moveStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
-    cancelTarget, setCancelTarget, cancelEvent, canEditEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
+    cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
     scenarioMsg, loadOpenVisitScenario, openVisits, regularize, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
   };
 }
