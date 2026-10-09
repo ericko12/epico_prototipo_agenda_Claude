@@ -1,5 +1,5 @@
 "use client";
-import { Alert, Box, FormControlLabel, Paper, Snackbar, Stack, Switch, Typography } from "@mui/material";
+import { Alert, Box, Snackbar } from "@mui/material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
@@ -11,24 +11,6 @@ import { SummaryMetrics } from "./SummaryMetrics";
 import { CalendarPanel } from "./CalendarPanel";
 import { SidePanel } from "./SidePanel";
 import { CancelEventDialog, EventDetailDialog, EventFormDialog, TaskFormDialog } from "./AgendaDialogs";
-
-/** Interruptor flotante para mostrar/ocultar los "huecos" (componentes que no existen en Épico). */
-const GapToggle = () => {
-  const { showGaps, setShowGaps } = useAgenda();
-  return (
-    <Paper elevation={3} sx={{ position: "fixed", right: { xs: 12, md: 16 }, bottom: { xs: 76, md: 16 }, zIndex: 1100, px: 1.5, py: 0.75, borderRadius: "8px", maxWidth: "calc(100vw - 32px)" }}>
-      <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap">
-        <FormControlLabel sx={{ m: 0, gap: 1 }} control={<Switch checked={showGaps} onChange={(e) => setShowGaps(e.target.checked)} />} label={<Typography fontSize={FontSizesEnum.Epsilon} fontWeight={FontWeightEnum.Medium}>Marcar huecos</Typography>} />
-        {showGaps && (
-          <Stack direction="row" gap={1.5} sx={{ display: { xs: "none", sm: "flex" } }}>
-            <Stack direction="row" alignItems="center" gap={0.5}><Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: ColorsEpico.ColorBrightOrange }} /><Typography fontSize={FontSizesEnum.Omega}>No existe en Épico</Typography></Stack>
-            <Stack direction="row" alignItems="center" gap={0.5}><Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: ColorsEpico.ColorPurple }} /><Typography fontSize={FontSizesEnum.Omega}>Solo simulación</Typography></Stack>
-          </Stack>
-        )}
-      </Stack>
-    </Paper>
-  );
-};
 
 const AgendaSnackbar = () => {
   const { snack, setSnack } = useAgenda();
@@ -57,7 +39,6 @@ const AgendaContent = () => {
       <TaskFormDialog />
       <CancelEventDialog />
       <AgendaSnackbar />
-      <GapToggle />
     </Box>
   );
 };
