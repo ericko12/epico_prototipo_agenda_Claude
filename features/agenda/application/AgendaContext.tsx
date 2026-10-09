@@ -25,6 +25,13 @@ function useAgendaState() {
   const [managerCanEdit, setManagerCanEdit] = useState(true);
   const [detailVisibility, setDetailVisibility] = useState<DetailVisibility>("full");
   const [view, setView] = useState<View>("day");
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  });
   const [summaryFilter, setSummaryFilterRaw] = useState<SummaryFilter>(null);
   const [portfolioScope, setPortfolioScope] = useState<"own" | "team">("team");
   const [search, setSearch] = useState("");
@@ -81,15 +88,74 @@ function useAgendaState() {
   const toggleRouteSel = (key: string) => setRouteSel((s) => (s.includes(key) ? s.filter((k) => k !== key) : [...s, key]));
 
   // ---------- ruta sugerida (primer destino = punto de partida) ----------
-  const formatRoute = (order: Client[]): RouteStop[] => {
-    let cursor = 8 * 60;
-    return order.map((c, i) => {
+  const todayIso = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const currentMinute = () => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  };
+
+  const routeBusyVisits = () =>
+    events
+      .filter((e) =>
+        e.status !== "Cancelada" &&
+        !e.absence &&
+        e.activityType === "visit" &&
+        e.kind === "planned" &&
+        (e.date ?? "2026-09-22") === selectedDate
+      )
+      .map((e) => ({ start: mins(e.time), end: mins(e.time) + e.duration }))
+      .sort((a, b) => a.start - b.start);
+
+  const findAvailableStart = (from: number, duration: number, busy: { start: number; end: number }[]) => {
+    let candidate = from;
+    const dayEnd = 8 * 60 + 13 * 60;
+
+    while (candidate + duration <= dayEnd) {
+      const conflict = busy.find((b) => candidate < b.end && b.start < candidate + duration);
+      if (!conflict) return candidate;
+      candidate = Math.max(candidate, conflict.end);
+    }
+    return null;
+  };
+
+  const formatRoute = (order: Client[]): RouteStop[] | null => {
+    const today = todayIso();
+    if (selectedDate < today) {
+      setRouteMsg("La ruta sugerida sólo puede generarse para hoy en horarios futuros o para días posteriores.");
+      return null;
+    }
+
+    let cursor = selectedDate === today ? Math.max(8 * 60, currentMinute()) : 8 * 60;
+    const busy = routeBusyVisits();
+    const plannedBusy = busy.slice();
+    const result: RouteStop[] = [];
+
+    for (let i = 0; i < order.length; i++) {
+      const c = order[i];
       const travel = i === 0 ? 0 : Math.max(10, Math.round(Math.hypot(c[2] - order[i - 1][2], c[3] - order[i - 1][3]) * 10));
-      cursor += travel;
-      const hh = hhmm(cursor);
-      cursor += 30;
-      return { c, hh, travel };
-    });
+      const earliest = cursor + travel;
+      const start = findAvailableStart(earliest, 30, plannedBusy);
+
+      if (start == null) {
+        setRouteMsg("No hay suficiente disponibilidad futura en el día seleccionado para acomodar toda la ruta.");
+        return null;
+      }
+
+      result.push({ c, hh: hhmm(start), travel });
+      plannedBusy.push({ start, end: start + 30 });
+      plannedBusy.sort((a, b) => a.start - b.start);
+      cursor = start + 30;
+    }
+
+    setRouteMsg("");
+    return result;
   };
 
   const routeOrder = (selected: Client[]) => {
@@ -120,8 +186,8 @@ function useAgendaState() {
       setRouteMsg("Selecciona al menos 2 clientes para sugerir una ruta.");
       return;
     }
-    setRouteMsg("");
-    setRoutePlan(formatRoute(routeOrder(selected)));
+    const plan = formatRoute(routeOrder(selected));
+    setRoutePlan(plan);
   };
 
   const cancelRouteSuggestion = () => {
@@ -150,6 +216,7 @@ function useAgendaState() {
       status: "Programada",
       routeSuggested: true,
       activityType: "visit",
+      date: selectedDate,
     }));
     const invalid = proposed.find((e, i) =>
       events.some((x) => x.kind === "planned" && !x.absence && x.status !== "Cancelada" && x.activityType !== "internal" && overlaps(e, x))
@@ -339,7 +406,7 @@ function useAgendaState() {
 
   return {
     profiles, owner, setOwner, profile, events, tasks, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
-    view, setView, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
+    view, setView, selectedDate, setSelectedDate, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel,
     routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
     cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
