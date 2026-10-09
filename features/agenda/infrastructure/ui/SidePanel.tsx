@@ -6,7 +6,7 @@ import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { clientId, clientKey, normalize } from "@/features/agenda/domain/agenda.data";
-import { OwnerId, RouteStart } from "@/features/agenda/domain/agenda.types";
+import { RouteStart } from "@/features/agenda/domain/agenda.types";
 import { AGENDA_COLORS, GapMarker, Hint, SectionTitle } from "./shared";
 
 const outlinedBtn = { borderRadius: "4px", fontWeight: FontWeightEnum.Medium, color: ColorsEpico.ColorDarkCharcoal, borderColor: ColorsEpico.ColorGrayNeutral };
@@ -94,14 +94,6 @@ export const SidePanel = () => {
   const selCount = a.routeSel.length;
   return (
     <Box sx={{ p: 2 }}>
-      <SectionTitle>Agenda visible</SectionTitle>
-      <Hint>Aparece para usuarios con alcance sobre otras personas.</Hint>
-      <TextField select fullWidth size="small" label="Agenda de" value={a.owner} disabled={a.role === "advisor"} onChange={(e) => a.setOwner(e.target.value as OwnerId)} sx={{ mt: 1.5 }}>
-        {(Object.entries(a.profiles) as [OwnerId, { label: string }][]).map(([id, p]) => <MenuItem key={id} value={id}>{p.label}</MenuItem>)}
-      </TextField>
-      <Hint sx={{ mt: 0.5 }}>{a.canEdit ? "Edición habilitada por el rol/permiso simulado." : "Modo consulta: la edición está deshabilitada."}</Hint>
-
-      <Divider sx={{ my: 2 }} />
       <SectionTitle>Clientes para agenda</SectionTitle>
       <Hint>Busca por Cliente ID, razón social o dirección. Arrastra un cliente al calendario o haz clic para agendar.</Hint>
       <TextField select fullWidth size="small" label="Alcance" value={a.role === "advisor" ? "own" : a.portfolioScope} disabled={a.role === "advisor"} onChange={(e) => { a.setPortfolioScope(e.target.value as "own" | "team"); }} sx={{ mt: 1.5 }}>
