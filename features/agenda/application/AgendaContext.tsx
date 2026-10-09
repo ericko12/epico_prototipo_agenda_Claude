@@ -171,7 +171,71 @@ function useAgendaState() {
     setCancelTarget(null); setDetail({ event: null });
     setSnack({ severity: "info", msg: `Evento cancelado: ${e.title} (${e.time}).` });
   };
-  const canEditEvent = (e: AgendaEvent) => canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Cierre automático"].includes(e.status);
+  const canEditEvent = (e: AgendaEvent) => canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre automático"].includes(e.status);
+
+  // ---------- ejecución de visita: Check-in / Check-out ----------
+  const canExecuteVisit = (e: AgendaEvent) =>
+    role === "advisor" &&
+    e.activityType === "visit" &&
+    !e.absence &&
+    e.status === "Programada";
+
+  const currentLocalTime = () => new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  const startCheckIn = (e: AgendaEvent): boolean => {
+    if (!canExecuteVisit(e)) return false;
+
+    const open = events.find((x) => x.id !== e.id && x.status === "Check-in activo");
+    if (open) {
+      setSnack({ severity: "error", msg: `No puedes iniciar otra visita. Primero cierra la visita abierta con ${open.title}.` });
+      setDetail({ event: open });
+      return false;
+    }
+
+    const now = Date.now();
+    const updated: AgendaEvent = {
+      ...e,
+      kind: "realized",
+      status: "Check-in activo",
+      planned: e.planned ?? e.time,
+      checkInAt: currentLocalTime(),
+      checkInEpochMs: now,
+      locationStatus: "En rango",
+      modifiedBy: actorName(),
+      modifiedAt: nowMx(),
+    };
+    updateEvents((evs) => evs.map((x) => (x.id === e.id ? updated : x)));
+    setDetail({ event: updated });
+    setSnack({ severity: "success", msg: `Check-in registrado para ${e.title}.` });
+    return true;
+  };
+
+  const completeCheckOut = (e: AgendaEvent, data: { objective: string; result: string; findings: string }): string | null => {
+    if (role !== "advisor" || e.status !== "Check-in activo") return "La visita no está disponible para Check-out.";
+    if (!data.objective.trim()) return "Captura el objetivo de la visita.";
+    if (!data.result.trim()) return "Captura el resultado de la visita.";
+
+    const end = Date.now();
+    const start = e.checkInEpochMs ?? end;
+    const duration = Math.max(0.1, Math.round(((end - start) / 60000) * 10) / 10);
+    const updated: AgendaEvent = {
+      ...e,
+      kind: "realized",
+      status: "Check-out realizado",
+      checkOutAt: currentLocalTime(),
+      checkOutEpochMs: end,
+      duration,
+      objective: data.objective.trim(),
+      result: data.result.trim(),
+      findings: data.findings.trim(),
+      modifiedBy: actorName(),
+      modifiedAt: nowMx(),
+    };
+    updateEvents((evs) => evs.map((x) => (x.id === e.id ? updated : x)));
+    setDetail({ event: updated });
+    setSnack({ severity: "success", msg: `Check-out registrado para ${e.title}. La visita quedó concluida.` });
+    return null;
+  };
 
   // ---------- tareas ----------
   const addTask = (t: Omit<AgendaTask, "id" | "status">) => {
@@ -192,7 +256,7 @@ function useAgendaState() {
     if (role !== "support") { setCloseResult({ type: "info", text: "La regularización masiva se representa como capacidad de Administrador de Agenda." }); return; }
     const open = events.find((e) => e.kind === "realized" && e.status === "Check-in activo");
     if (!open) { setCloseResult({ type: "info", text: "No hay una visita abierta que regularizar en este momento." }); return; }
-    updateEvents((evs) => evs.map((e) => (e.id === open.id ? { ...e, status: "Cierre automático", duration: 10 } : e)));
+    updateEvents((evs) => evs.map((e) => (e.id === open.id ? { ...e, status: "Cierre automático", duration: 10, automaticClose: true, checkOutAt: "22:00" } : e)));
     setCloseResult({ type: "ok", text: "Cierre automático confirmado por negocio: proceso diario 22:00 CDMX, duración registrada 10 minutos y trazabilidad diferenciada." });
   };
 
@@ -201,7 +265,7 @@ function useAgendaState() {
     view, setView, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, routeStart, setRouteStart, routeStartInfo,
     routePlan, routeMsg, suggestRoute, moveStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
-    cancelTarget, setCancelTarget, cancelEvent, canEditEvent, taskFormOpen, setTaskFormOpen, addTask,
+    cancelTarget, setCancelTarget, cancelEvent, canEditEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
     scenarioMsg, loadOpenVisitScenario, openVisits, regularize, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
   };
 }
