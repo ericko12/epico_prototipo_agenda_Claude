@@ -191,7 +191,6 @@ export const EventFormDialog = () => {
   return (
     <EpicoDialog open={f.open} title={f.title} onClose={a.closeForm}
       actions={<><Button variant="outlined" onClick={a.closeForm} sx={closeBtnSx}>Cancelar</Button><Button variant="contained" onClick={save} sx={saveBtnSx}>Guardar actividad</Button></>}>
-      <Typography fontSize={FontSizesEnum.Delta} color={ColorsEpico.ColorBlack60} sx={{ mb: 2 }}>Selecciona un cliente de tu cartera o captura la actividad.</Typography>
       <Stack spacing={2}>
         <Box>
           <TextField select fullWidth size="small" label="Tipo" value={v.type} onChange={set("type")}>
@@ -200,7 +199,6 @@ export const EventFormDialog = () => {
             <MenuItem value="internal">Otra actividad</MenuItem>
           </TextField>
           {v.type === "promo" && <Hint sx={{ mt: 0.5 }}>Este tipo requiere evidencia al completarse. La evidencia se adjunta en la ejecución/resultado, no en la planeación.</Hint>}
-          <Hint sx={{ mt: 0.5 }}>Tipos ilustrativos del catálogo inicial compartido. La configuración avanzada queda fuera del MVP.</Hint>
         </Box>
         {v.type === "visit" && (
           <Box>
@@ -241,7 +239,7 @@ export const EventFormDialog = () => {
                   label="Buscar cliente"
                   placeholder="ClienteID, razón social o dirección"
                   required
-                  helperText="Busca desde 3 caracteres dentro de la cartera visible."
+                  helperText="Selecciona un cliente de tu cartera. Busca desde 3 caracteres por ClienteID, razón social o dirección."
                 />
               )}
             />
