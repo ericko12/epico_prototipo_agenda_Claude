@@ -121,7 +121,7 @@ export const EventDetailDialog = () => {
       <Stack direction="row" gap={1} flexWrap="wrap">
         <EpicoLabel variant={e.kind === "planned" ? "info" : "success"}>{e.kind === "planned" ? "Planeado" : "Ejecutado"}</EpicoLabel>
         <EpicoLabel variant={statusVariant(e.status)}>{e.status}</EpicoLabel>
-        {e.routeSuggested && <EpicoLabel variant="eta">Ruta sugerida</EpicoLabel>}
+        {e.routeSuggested && <Box title="Ruta sugerida"><EpicoLabel variant="eta">RS</EpicoLabel></Box>}
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "stretch", sm: "center" }} justifyContent="space-between" gap={1.5} sx={{ mt: 2 }}>
