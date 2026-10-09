@@ -31,6 +31,15 @@ export interface AgendaEvent {
   cancelReason?: string;
   regularizedBy?: string;
   routeSuggested?: boolean;
+  checkInAt?: string;
+  checkOutAt?: string;
+  checkInEpochMs?: number;
+  checkOutEpochMs?: number;
+  objective?: string;
+  result?: string;
+  findings?: string;
+  locationStatus?: "En rango" | "Fuera de rango" | "Sin ubicación válida";
+  automaticClose?: boolean;
 }
 
 export interface AgendaTask {
