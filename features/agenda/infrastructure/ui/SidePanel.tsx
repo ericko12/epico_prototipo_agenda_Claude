@@ -74,7 +74,7 @@ const RouteBox = () => {
       <Hint>La primera posición define el inicio de la ruta. Reordena los destinos antes de agregarlos a Agenda.</Hint>
 
       <Box sx={{ mt: 1 }}>
-        {a.routePlan.map((x, i) => (
+        {a.routePlan!.map((x, i) => (
           <Stack key={clientKey(x.c)} direction="row" alignItems="center" gap={1} sx={{ py: 1, borderBottom: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, "&:last-of-type": { borderBottom: 0 } }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography fontSize={FontSizesEnum.Epsilon} fontWeight={FontWeightEnum.Bold}>
