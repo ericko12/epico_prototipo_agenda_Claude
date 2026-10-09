@@ -170,7 +170,7 @@ export const EventFormDialog = () => {
       type: editing?.activityType ?? "visit", client: initialClient, address: initialAddress, date: editing?.date ?? "2026-09-22",
       time: f.time ?? "10:30", duration: String(editing?.duration ?? 30), quote: editing?.quote ?? "", description: editing?.description ?? "",
     });
-    setClientQuery("");
+    setClientQuery(initialClient);
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.seed]);
