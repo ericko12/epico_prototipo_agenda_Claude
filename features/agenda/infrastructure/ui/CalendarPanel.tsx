@@ -1,18 +1,53 @@
 "use client";
 import { useRef, useState } from "react";
-import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Box, IconButton, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { DAY_HOURS, DAY_START, hhmm, mins } from "@/features/agenda/domain/agenda.data";
 import { AgendaEvent, View } from "@/features/agenda/domain/agenda.types";
+import { ChevronLeft, ChevronRight } from "@mui/icons-material";
 import { AGENDA_COLORS, GapMarker } from "./shared";
 
-const TITLES: Record<View, string> = {
-  day: "Martes 22 de septiembre de 2026",
-  week: "Semana del 21 al 25 de septiembre de 2026",
-  month: "Septiembre de 2026",
+const INITIAL_DATE = new Date(2026, 8, 22);
+
+const formatLongDate = (date: Date) =>
+  new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(date);
+
+const formatShortDate = (date: Date) =>
+  new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" }).format(date);
+
+const formatMonth = (date: Date) =>
+  new Intl.DateTimeFormat("es-MX", { month: "long", year: "numeric" }).format(date);
+
+const startOfWeek = (date: Date) => {
+  const copy = new Date(date);
+  const day = copy.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copy.setDate(copy.getDate() + diff);
+  return copy;
+};
+
+const periodTitle = (view: View, date: Date) => {
+  if (view === "day") return formatLongDate(date);
+  if (view === "month") {
+    const value = formatMonth(date);
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  const start = startOfWeek(date);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 4);
+  return `Semana del ${formatShortDate(start)} al ${formatShortDate(end)}`;
+};
+
+const movePeriod = (view: View, date: Date, direction: -1 | 1) => {
+  const next = new Date(date);
+  if (view === "day") next.setDate(next.getDate() + direction);
+  else if (view === "week") next.setDate(next.getDate() + direction * 7);
+  else next.setMonth(next.getMonth() + direction);
+  return next;
 };
 const HOUR_PX = 60;
 const LABEL_W = 56;
@@ -148,6 +183,9 @@ const MonthView = () => {
 
 export const CalendarPanel = () => {
   const { view, setView } = useAgenda();
+  const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
+  const title = periodTitle(view, selectedDate);
+
   return (
     <Box>
       <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} gap={{ xs: 0.5, sm: 2 }} sx={{ px: 1.5, borderBottom: `1px solid ${ColorsEpico.ColorSkyBlue}` }}>
@@ -156,7 +194,22 @@ export const CalendarPanel = () => {
           <Tab value="week" label="Semana" />
           <Tab value="month" label="Mes" />
         </Tabs>
-        <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta} sx={{ flex: 1 }}>{TITLES[view]}</Typography>
+        <Stack direction="row" alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }} sx={{ flex: 1, minWidth: 0, width: { xs: "100%", sm: "auto" } }}>
+          <IconButton size="small" aria-label="Periodo anterior" onClick={() => setSelectedDate((d) => movePeriod(view, d, -1))}>
+            <ChevronLeft />
+          </IconButton>
+          <Typography
+            fontWeight={FontWeightEnum.Bold}
+            fontSize={FontSizesEnum.Delta}
+            textAlign="center"
+            sx={{ px: 0.5, minWidth: 0, flex: { xs: 1, sm: "0 1 auto" }, textTransform: "capitalize" }}
+          >
+            {title}
+          </Typography>
+          <IconButton size="small" aria-label="Periodo siguiente" onClick={() => setSelectedDate((d) => movePeriod(view, d, 1))}>
+            <ChevronRight />
+          </IconButton>
+        </Stack>
         <Box sx={{ pb: { xs: 1, sm: 0 } }}><Legend /></Box>
       </Stack>
       <GapMarker placement="bottom" label="No existe en Épico ni en MUI core: vista de calendario Día/Semana/Mes. Requiere decisión de Arquitectura (librería o desarrollo propio).">
