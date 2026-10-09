@@ -181,7 +181,7 @@ export const EventFormDialog = () => {
         const q = normalize(clientQuery.trim());
         const related = a.visiblePortfolio.filter((x) => x[0] === name);
         return normalize(name).includes(q)
-          || normalize(clientId(related[0])).includes(q)
+          || (related[0] ? normalize(clientId(related[0])).includes(q) : false)
           || related.some((x) => normalize(x[1]).includes(q));
       });
   const addresses = Array.from(new Set(a.visiblePortfolio.filter((x) => x[0] === v.client).map((x) => x[1])));
@@ -229,7 +229,7 @@ export const EventFormDialog = () => {
                     <Box>
                       <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Medium}>{option}</Typography>
                       <Typography fontSize={FontSizesEnum.Omega} color={ColorsEpico.ColorBlack60}>
-                        {clientId(sample)}{sample ? ` · ${sample[1]}` : ""}
+                        {sample ? clientId(sample) : "CLI-DUMMY"}{sample ? ` · ${sample[1]}` : ""}
                       </Typography>
                     </Box>
                   </li>
