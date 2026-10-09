@@ -106,14 +106,14 @@ export const EventDetailDialog = () => {
       {e.status === "Check-in activo" && (
         <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${ColorsEpico.ColorLightBlueishGray}` }}>
           <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Bold} sx={{ mb: 0.5 }}>Visita en curso</Typography>
-          <Hint>El Check-in ya fue registrado. Para cerrar la visita, captura objetivo y resultado. Los valores definitivos deberán provenir del catálogo/configuración confirmada para el tipo de visita.</Hint>
+          <Hint>El Check-in ya fue registrado. Para cerrar la visita, captura objetivo y resultado. El prototipo no carga opciones dummy mientras negocio confirma el catálogo definitivo para estos campos.</Hint>
           <Stack spacing={1.5} sx={{ mt: 1.5 }}>
             <TextField
               fullWidth
               required
               size="small"
               label="Objetivo de la visita"
-              placeholder="Seleccionar del catálogo"
+              placeholder="Captura el objetivo de la visita"
               value={objective}
               onChange={(x) => setObjective(x.target.value)}
             />
@@ -122,7 +122,7 @@ export const EventDetailDialog = () => {
               required
               size="small"
               label="Resultado de la visita"
-              placeholder="Seleccionar del catálogo"
+              placeholder="Captura el resultado de la visita"
               value={result}
               onChange={(x) => setResult(x.target.value)}
             />
@@ -157,7 +157,7 @@ export const EventDetailDialog = () => {
 export const EventFormDialog = () => {
   const a = useAgenda();
   const f = a.form;
-  const [v, setV] = useState({ type: "visit" as ActivityType, client: FORM_CLIENTS[0], address: FORM_ADDRESSES[0], date: "2026-09-22", time: "10:30", duration: "30", quote: "", description: "" });
+  const [v, setV] = useState({ type: "visit" as ActivityType, client: "", address: "", date: "2026-09-22", time: "10:30", duration: "30", quote: "", description: "" });
   const [error, setError] = useState<string | null>(null);
   const [clientQuery, setClientQuery] = useState("");
   useEffect(() => {
