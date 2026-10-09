@@ -8,6 +8,7 @@ import { useSetBreadcrumb } from "@/features/layoutMain/infrastructure/ui/Breadc
 import { AgendaHeader } from "./AgendaHeader";
 import { SimulationControls } from "./SimulationControls";
 import { SummaryMetrics } from "./SummaryMetrics";
+import { AgendaVisibleFilter } from "./AgendaVisibleFilter";
 import { CalendarPanel } from "./CalendarPanel";
 import { SidePanel } from "./SidePanel";
 import { CancelEventDialog, EventDetailDialog, EventFormDialog, TaskFormDialog } from "./AgendaDialogs";
@@ -27,6 +28,7 @@ const AgendaContent = () => {
     <Box sx={{ p: { xs: 2, md: 3 }, pb: { xs: 10, md: 10 } }}>
       <AgendaHeader />
       <SimulationControls />
+      <AgendaVisibleFilter />
       <SummaryMetrics />
       <Box sx={{ mt: 2, display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 340px" }, border: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, borderRadius: "8px", overflow: "hidden", bgcolor: ColorsEpico.ColorWhite }}>
         <Box sx={{ minWidth: 0 }}><CalendarPanel /></Box>
