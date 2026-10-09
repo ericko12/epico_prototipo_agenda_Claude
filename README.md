@@ -3,7 +3,9 @@
 Prototipo navegable que reproduce el **shell real de Épico Móvil** (tema MUI, menú lateral, AppBar con breadcrumbs, navegación inferior en móvil) con **datos dummy**, sin login ni backend, e integra el **Simulador de Agenda V8.2** portado a componentes MUI.
 
 ## Cómo verlo
-- **Sitio ya compilado:** abre la carpeta `out/` con cualquier servidor estático (`npx serve out`) o súbela a GitHub Pages.
+- **GitHub Pages automático:** al hacer push a `main`, `.github/workflows/deploy.yml` compila y publica. Solo activa *Settings → Pages → Source: GitHub Actions*.
+- Hallazgos completos y decisiones pendientes: [`docs/HALLAZGOS.md`](docs/HALLAZGOS.md).
+- **Compilar a mano:** `npm install && npm run build` genera `out/` (sitio estático; se ve con `npx serve out`).
   - Si lo publicas en un subdirectorio (p. ej. `usuario.github.io/epico-sintetico`), compila con `NEXT_PUBLIC_BASE_PATH=/epico-sintetico npm run build`.
 - **Desarrollo:** `npm install` → `npm run dev` → http://localhost:3000/Agenda
 
