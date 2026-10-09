@@ -40,6 +40,16 @@ const Fact = ({ label, value }: { label: string; value: React.ReactNode }) => (
 export const EventDetailDialog = () => {
   const a = useAgenda();
   const e = a.detail.event;
+  const [objective, setObjective] = useState("");
+  const [result, setResult] = useState("");
+  const [findings, setFindings] = useState("");
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  useEffect(() => {
+    setObjective(e?.objective ?? "");
+    setResult(e?.result ?? "");
+    setFindings(e?.findings ?? "");
+    setCheckoutError(null);
+  }, [e?.id, e?.status]);
   if (!e) return null;
   const close = () => a.setDetail({ event: null });
   if (a.hideDetail) {
@@ -52,6 +62,9 @@ export const EventDetailDialog = () => {
     );
   }
   const editable = a.canEditEvent(e);
+  const canCheckIn = a.canExecuteVisit(e);
+  const canCheckOut = a.role === "advisor" && e.status === "Check-in activo";
+  const doCheckOut = () => setCheckoutError(a.completeCheckOut(e, { objective, result, findings }));
   return (
     <EpicoDialog
       open
@@ -63,6 +76,8 @@ export const EventDetailDialog = () => {
           {editable && <Button variant="outlined" color="error" onClick={() => a.setCancelTarget(e)} sx={{ ...closeBtnSx, color: undefined, borderColor: undefined, mr: "auto" }}>Cancelar evento</Button>}
           <Button variant="outlined" onClick={close} sx={closeBtnSx}>Cerrar</Button>
           {editable && <Button variant="contained" onClick={() => a.openEdit(e)} sx={saveBtnSx}>Editar / reprogramar</Button>}
+          {canCheckIn && <Button variant="contained" onClick={() => a.startCheckIn(e)} sx={saveBtnSx}>Iniciar Check-in</Button>}
+          {canCheckOut && <Button variant="contained" onClick={doCheckOut} sx={saveBtnSx}>Realizar Check-out</Button>}
         </>
       }
     >
@@ -87,6 +102,54 @@ export const EventDetailDialog = () => {
         {e.quote && <Fact label="Cotización relacionada" value={e.quote} />}
       </Box>
       {e.description && <Fact label="Detalle" value={e.description} />}
+
+      {e.status === "Check-in activo" && (
+        <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${ColorsEpico.ColorLightBlueishGray}` }}>
+          <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Bold} sx={{ mb: 0.5 }}>Visita en curso</Typography>
+          <Hint>El Check-in ya fue registrado. Para cerrar la visita, captura objetivo y resultado. Los valores definitivos deberán provenir del catálogo/configuración confirmada para el tipo de visita.</Hint>
+          <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+            <TextField
+              fullWidth
+              required
+              size="small"
+              label="Objetivo de la visita"
+              placeholder="Seleccionar del catálogo"
+              value={objective}
+              onChange={(x) => setObjective(x.target.value)}
+            />
+            <TextField
+              fullWidth
+              required
+              size="small"
+              label="Resultado de la visita"
+              placeholder="Seleccionar del catálogo"
+              value={result}
+              onChange={(x) => setResult(x.target.value)}
+            />
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              size="small"
+              label="Hallazgos / notas"
+              placeholder="Opcional"
+              value={findings}
+              onChange={(x) => setFindings(x.target.value)}
+            />
+            {checkoutError && <Alert severity="error" variant="outlined">{checkoutError}</Alert>}
+          </Stack>
+        </Box>
+      )}
+
+      {(e.checkInAt || e.checkOutAt) && (
+        <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${ColorsEpico.ColorLightBlueishGray}` }}>
+          <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Bold}>Ejecución</Typography>
+          {e.checkInAt && <Fact label="Check-in" value={e.checkInAt} />}
+          {e.checkOutAt && <Fact label="Check-out" value={e.checkOutAt} />}
+          {e.status === "Check-out realizado" && <Fact label="Duración real" value={`${e.duration} min`} />}
+          {e.automaticClose && <EpicoLabel variant="eta">Cierre automático</EpicoLabel>}
+        </Box>
+      )}
     </EpicoDialog>
   );
 };
