@@ -141,7 +141,7 @@ export const SidePanel = () => {
           "Toda visita debe tener un evento de Agenda antes del Check-in. Si surge durante la ruta, primero se crea el evento y después se inicia la visita.",
           "No se permite un nuevo Check-in mientras exista una visita abierta.",
           "Si existe un Check-in abierto al intentar iniciar la siguiente visita, el asesor debe recibir la advertencia y cerrar primero la visita anterior.",
-          "El cierre de visitas que queden abiertas al final del día sigue pendiente de definición con negocio: automático o regularización manual.",
+          "Si la última visita del día queda abierta, el proceso diario de las 22:00 hora Ciudad de México la cierra automáticamente, registra 10 minutos de duración y la identifica como cierre automático.",
         ].map((r) => <Typography key={r} fontSize={FontSizesEnum.Epsilon} color={ColorsEpico.ColorBlack60} sx={{ mt: 0.75 }}>• {r}</Typography>)}
         <Button fullWidth variant="outlined" color="error" onClick={a.simulateDayClose} sx={{ mt: 1.5, borderRadius: "4px", fontWeight: FontWeightEnum.Medium }}>Simular cierre automático · 22:00 CDMX</Button>
         {a.closeResult && (a.closeResult.type === "ok"
