@@ -591,33 +591,40 @@ export const CalendarPanel = () => {
 
   return (
     <Box>
-      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} gap={{ xs: 0.5, sm: 2 }} sx={{ px: 1.5, borderBottom: `1px solid ${ColorsEpico.ColorSkyBlue}` }}>
-        <Tabs value={view} onChange={(_, v) => setView(v)} sx={{ minHeight: 48 }}>
-          <Tab value="day" label="Día" />
-          <Tab value="week" label="Semana" />
-          <Tab value="month" label="Mes" />
-        </Tabs>
-        <Stack direction="row" alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }} sx={{ flex: 1, minWidth: 0, width: { xs: "100%", sm: "auto" } }}>
-          <Button size="small" variant="outlined" startIcon={<TodayOutlined />} onClick={goToday} sx={{ mr: 0.5, textTransform: "none", borderRadius: "4px" }}>Hoy</Button>
-          <IconButton size="small" aria-label="Periodo anterior" onClick={() => setSelectedDate((d) => movePeriod(view, d, -1))}>
-            <ChevronLeft />
-          </IconButton>
-          <ButtonBase
-            onClick={(e) => setCalendarAnchor(e.currentTarget)}
-            aria-label="Abrir selector de fecha"
-            sx={{ px: 0.75, py: 0.5, minWidth: 0, borderRadius: "4px", "&:hover": { bgcolor: ColorsEpico.ColorNeutro } }}
-          >
-            <CalendarMonthOutlined sx={{ fontSize: 18, mr: 0.5, color: ColorsEpico.ColorBlack60 }} />
-            <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta} textAlign="center" sx={{ minWidth: 0, textTransform: "capitalize" }}>
-              {title}
-            </Typography>
-          </ButtonBase>
-          <IconButton size="small" aria-label="Periodo siguiente" onClick={() => setSelectedDate((d) => movePeriod(view, d, 1))}>
-            <ChevronRight />
-          </IconButton>
+      <Box sx={{ px: 1.5, py: 1.25, borderBottom: `1px solid ${ColorsEpico.ColorSkyBlue}` }}>
+        <Stack direction={{ xs: "column", md: "row" }} alignItems={{ xs: "stretch", md: "center" }} justifyContent="space-between" gap={1}>
+          <Stack direction="row" alignItems="center" gap={0.25} sx={{ minWidth: 0 }}>
+            <IconButton size="small" aria-label="Periodo anterior" onClick={() => setSelectedDate((d) => movePeriod(view, d, -1))}>
+              <ChevronLeft />
+            </IconButton>
+            <IconButton size="small" aria-label="Periodo siguiente" onClick={() => setSelectedDate((d) => movePeriod(view, d, 1))}>
+              <ChevronRight />
+            </IconButton>
+            <ButtonBase
+              onClick={(e) => setCalendarAnchor(e.currentTarget)}
+              aria-label="Abrir selector de fecha"
+              sx={{ ml: 0.5, px: 0.75, py: 0.5, minWidth: 0, borderRadius: "4px", "&:hover": { bgcolor: ColorsEpico.ColorNeutro } }}
+            >
+              <CalendarMonthOutlined sx={{ fontSize: 19, mr: 0.75, color: ColorsEpico.ColorPrimary }} />
+              <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta} textAlign="left" noWrap sx={{ minWidth: 0, textTransform: "capitalize" }}>
+                {title}
+              </Typography>
+            </ButtonBase>
+          </Stack>
+
+          <Stack direction="row" alignItems="center" justifyContent={{ xs: "space-between", md: "flex-end" }} gap={1}>
+            <Tabs value={view} onChange={(_, v) => setView(v)} sx={{ minHeight: 40, "& .MuiTab-root": { minHeight: 40, py: 0.5, px: 2 } }}>
+              <Tab value="day" label="Día" />
+              <Tab value="week" label="Semana" />
+              <Tab value="month" label="Mes" />
+            </Tabs>
+            <Button size="small" variant="outlined" startIcon={<TodayOutlined />} onClick={goToday} sx={{ textTransform: "none", borderRadius: "4px", whiteSpace: "nowrap" }}>Hoy</Button>
+          </Stack>
         </Stack>
-        <Box sx={{ pb: { xs: 1, sm: 0 } }}><Legend /></Box>
-      </Stack>
+        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 0.75 }}>
+          <Legend />
+        </Stack>
+      </Box>
 
       <Popover
         open={!!calendarAnchor}
