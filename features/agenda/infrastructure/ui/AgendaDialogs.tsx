@@ -214,7 +214,7 @@ export const EventFormDialog = () => {
     const initialClient = f.client ?? editing?.title ?? firstPortfolio?.[0] ?? "";
     const initialAddress = f.address ?? editing?.address ?? a.visiblePortfolio.find((x) => x[0] === initialClient)?.[1] ?? firstPortfolio?.[1] ?? "";
     setV({
-      type: editing?.activityType ?? "visit", client: initialClient, address: initialAddress, date: editing?.date ?? "2026-09-22",
+      type: editing?.activityType ?? "visit", client: initialClient, address: initialAddress, date: f.date ?? editing?.date ?? new Date().toISOString().slice(0, 10),
       time: f.time ?? "10:30", duration: String(editing?.duration ?? 30), quote: editing?.quote ?? "", description: editing?.description ?? "",
     });
     setClientQuery(initialClient);
