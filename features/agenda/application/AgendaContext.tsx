@@ -237,8 +237,15 @@ function useAgendaState() {
       date: selectedDate,
     }));
     const invalid = proposed.find((e, i) =>
-      events.some((x) => x.kind === "planned" && !x.absence && x.status !== "Cancelada" && x.activityType !== "internal" && overlaps(e, x))
-      || proposed.slice(0, i).some((x) => overlaps(e, x))
+      events.some((x) =>
+        x.kind === "planned" &&
+        !x.absence &&
+        x.status !== "Cancelada" &&
+        x.activityType !== "internal" &&
+        (x.date ?? "2026-09-22") === e.date &&
+        overlaps(e, x)
+      )
+      || proposed.slice(0, i).some((x) => x.date === e.date && overlaps(e, x))
     );
     if (invalid) {
       setSnack({ severity: "error", msg: `La ruta no se guardó. Existe un traslape con ${invalid.title} a las ${invalid.time}. Corrige la propuesta completa.` });
