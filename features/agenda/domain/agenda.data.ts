@@ -121,3 +121,56 @@ export const clientKey = (c: Client) => `${c[0]}|${c[1]}`;
 export const clientId = (c: Client) => clientIds[c[0]] || "CLI-DUMMY";
 export const normalize = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 export const nowMx = () => new Date().toLocaleString("es-MX");
+
+/** Fecha local en formato ISO (AAAA-MM-DD). */
+export const isoDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+export const todayIso = () => isoDate(new Date());
+
+/**
+ * Fecha a la que se anclan los eventos DUMMY que no traen `date`.
+ * Antes era fija (2026-09-22) y al abrir la Agenda en "Hoy" el calendario salía vacío
+ * aunque el resumen mostraba visitas. Ahora se anclan al día en que se abre el prototipo.
+ */
+export const BASE_EVENT_DATE = todayIso();
+export const eventDateOf = (e: { date?: string }) => e.date ?? BASE_EVENT_DATE;
+
+/** Lunes de la semana de `date`. */
+export const startOfWeek = (date: Date) => {
+  const copy = new Date(date);
+  const day = copy.getDay();
+  copy.setDate(copy.getDate() + (day === 0 ? -6 : 1 - day));
+  return copy;
+};
+
+const parseIso = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
+
+/** Rango [desde, hasta] (ISO, inclusivo) del periodo visible según la vista. */
+export const visibleRange = (view: "day" | "week" | "month", selectedIso: string): [string, string] => {
+  const d = parseIso(selectedIso);
+  if (view === "day") return [selectedIso, selectedIso];
+  if (view === "week") {
+    const start = startOfWeek(d);
+    const end = new Date(start); end.setDate(start.getDate() + 6);
+    return [isoDate(start), isoDate(end)];
+  }
+  return [isoDate(new Date(d.getFullYear(), d.getMonth(), 1)), isoDate(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
+};
+
+/** Texto del periodo para el título del resumen: "de hoy", "del 22 de septiembre", "de esta semana", "de octubre". */
+export const periodLabel = (view: "day" | "week" | "month", selectedIso: string) => {
+  const d = parseIso(selectedIso);
+  const today = new Date();
+  if (view === "day") {
+    if (selectedIso === todayIso()) return "de hoy";
+    return `del ${new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long" }).format(d)}`;
+  }
+  if (view === "week") {
+    const [from] = visibleRange("week", selectedIso);
+    if (from === visibleRange("week", todayIso())[0]) return "de esta semana";
+    return `de la semana del ${new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long" }).format(parseIso(from))}`;
+  }
+  const sameMonth = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
+  if (sameMonth) return "de este mes";
+  return `de ${new Intl.DateTimeFormat("es-MX", { month: "long", year: "numeric" }).format(d)}`;
+};

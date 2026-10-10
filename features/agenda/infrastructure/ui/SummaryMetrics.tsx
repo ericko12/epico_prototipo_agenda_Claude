@@ -16,11 +16,11 @@ const METRICS: { key: Exclude<SummaryFilter, null>; label: string; color: string
 ];
 
 export const SummaryMetrics = () => {
-  const { summary, summaryFilter, setSummaryFilter, profile } = useAgenda();
+  const { summary, summaryPeriod, summaryFilter, setSummaryFilter, profile } = useAgenda();
   return (
     <Box sx={{ mt: 2 }}>
       <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "baseline" }} gap={{ xs: 0, sm: 1 }}>
-        <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta}>Resumen de {profile.label}</Typography>
+        <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta}>Resumen {summaryPeriod} · {profile.label}</Typography>
         <Hint>Selecciona un indicador para resaltar en el calendario los eventos relacionados.</Hint>
       </Stack>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }, gap: 1.5, mt: 1 }}>
