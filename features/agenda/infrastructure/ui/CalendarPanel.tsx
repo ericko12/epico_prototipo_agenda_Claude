@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Box, Chip, IconButton, Stack, Tab, Tabs, Typography } from "@mui/material";
-import { ChevronLeft, ChevronRight } from "@mui/icons-material";
+import { Box, Button, ButtonBase, Chip, IconButton, Popover, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { CalendarMonthOutlined, ChevronLeft, ChevronRight, TodayOutlined } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
@@ -149,7 +149,7 @@ const EventCard = ({ e, compact = false }: { e: AgendaEvent; compact?: boolean }
         x.dataTransfer.effectAllowed = "move";
         x.dataTransfer.setData("application/x-agenda-event", String(e.id));
       }}
-      onClick={() => a.setDetail({ event: e })}
+      onClick={(x) => { x.stopPropagation(); a.setDetail({ event: e }); }}
       title={a.hideDetail ? "Disponibilidad reservada" : `${e.time} · ${e.title} · ${e.address} · ${e.status}`}
       sx={{
         height: "100%",
@@ -252,10 +252,31 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
           /* sin datos */
         }
       }}
-      sx={{ position: "relative", height: CALENDAR_HEIGHT, ml: 0, bgcolor: ColorsEpico.ColorWhite }}
+      onClick={(e) => {
+        if (!a.canEdit) return;
+        const minute = minuteFromY(e.clientY);
+        a.setSelectedGridSlot({ date: selectedIso, time: hhmm(DAY_START + minute) });
+      }}
+      sx={{ position: "relative", height: CALENDAR_HEIGHT, ml: 0, bgcolor: ColorsEpico.ColorWhite, cursor: a.canEdit ? "crosshair" : "default" }}
     >
       <TimeLines />
       <CurrentTimeLine date={selectedDate} />
+      {a.selectedGridSlot?.date === selectedIso && a.selectedGridSlot.time && (
+        <Box
+          sx={{
+            position: "absolute",
+            left: LABEL_W,
+            right: 8,
+            top: mins(a.selectedGridSlot.time) - DAY_START,
+            height: 30,
+            border: `2px solid ${ColorsEpico.ColorSecondary}`,
+            bgcolor: ColorsEpico.ColorSecondary100,
+            borderRadius: "4px",
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        />
+      )}
       {Array.from({ length: DAY_HOURS + 1 }, (_, i) => (
         <Typography key={i} sx={{ position: "absolute", left: 8, top: i * HOUR_PX + 2, fontSize: FontSizesEnum.Omega, color: ColorsEpico.ColorNeutralGray, zIndex: 1 }}>
           {hhmm(DAY_START + i * 60)}
@@ -363,6 +384,10 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
                   if (moving) a.rescheduleEvent(moving, dateIso, hhmm(DAY_START + minuteFromY(e.clientY)));
                   setDropHint(null);
                 }}
+                onClick={(e) => {
+                  if (!a.canEdit) return;
+                  a.setSelectedGridSlot({ date: dateIso, time: hhmm(DAY_START + minuteFromY(e.clientY)) });
+                }}
                 sx={{
                   position: "relative",
                   height: CALENDAR_HEIGHT,
@@ -372,6 +397,22 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
               >
                 <TimeLines left={0} />
                 <CurrentTimeLine date={d} left={0} />
+                {a.selectedGridSlot?.date === dateIso && a.selectedGridSlot.time && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      left: 4,
+                      right: 4,
+                      top: mins(a.selectedGridSlot.time) - DAY_START,
+                      height: 30,
+                      border: `2px solid ${ColorsEpico.ColorSecondary}`,
+                      bgcolor: ColorsEpico.ColorSecondary100,
+                      borderRadius: "4px",
+                      pointerEvents: "none",
+                      zIndex: 1,
+                    }}
+                  />
+                )}
                 {dropHint?.day === dayIndex && (
                   <Box sx={{ position: "absolute", left: 4, right: 4, top: dropHint.minute, height: 30, border: `2px dashed ${ColorsEpico.ColorSecondary}`, borderRadius: "4px", bgcolor: ColorsEpico.ColorSecondary100, zIndex: 5, pointerEvents: "none" }} />
                 )}
@@ -405,25 +446,61 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
 
 const itemSx = { borderLeft: `3px solid ${AGENDA_COLORS.planned.main}`, bgcolor: AGENDA_COLORS.planned.bg, borderRadius: "4px", p: 0.75, mb: 0.75, fontSize: FontSizesEnum.Omega };
 
-const MonthView = () => {
+const MonthView = ({ selectedDate }: { selectedDate: Date }) => {
   const a = useAgenda();
-  const evs = a.events.filter((e) => e.status !== "Cancelada");
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
+  const first = new Date(year, month, 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const gridStart = new Date(year, month, 1 - startOffset);
+  const days = Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    return d;
+  });
+
   return (
     <Box sx={{ overflowX: "auto" }}>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(90px, 1fr))" }}>
         {["L", "M", "M", "J", "V", "S", "D"].map((x, i) => (
           <Typography key={i} sx={{ p: 1, textAlign: "center", fontWeight: FontWeightEnum.Bold, fontSize: FontSizesEnum.Delta, borderBottom: `1px solid ${ColorsEpico.ColorSkyBlue}` }}>{x}</Typography>
         ))}
-        {Array.from({ length: 35 }, (_, i) => {
-          const d = i - 1;
+        {days.map((d) => {
+          const dateIso = isoDate(d);
+          const inMonth = d.getMonth() === month;
+          const selected = a.selectedGridSlot?.date === dateIso;
+          const dayEvents = a.events.filter((e) => e.status !== "Cancelada" && eventDate(e) === dateIso);
           return (
-            <Box key={i} sx={{ minHeight: 104, borderRight: `1px solid ${ColorsEpico.ColorSkyBlue}`, borderBottom: `1px solid ${ColorsEpico.ColorSkyBlue}`, p: 0.75, fontSize: FontSizesEnum.Omega, bgcolor: d === 22 ? ColorsEpico.ColorBrightBlue5 : undefined }}>
-              {d > 0 && d <= 30 && <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Epsilon} sx={{ mb: 0.5 }}>{d}</Typography>}
-              {d === 22 && evs.slice(0, 3).map((e) => (
-                <Box key={String(e.id)} onClick={() => a.setDetail({ event: e })} sx={{ ...itemSx, p: 0.5, mb: 0.5, cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.time} {a.eventLabel(e)}</Box>
+            <Box
+              key={dateIso}
+              onClick={() => {
+                if (!a.canEdit) return;
+                a.setSelectedGridSlot({ date: dateIso });
+              }}
+              sx={{
+                minHeight: 104,
+                borderRight: `1px solid ${ColorsEpico.ColorSkyBlue}`,
+                borderBottom: `1px solid ${ColorsEpico.ColorSkyBlue}`,
+                p: 0.75,
+                fontSize: FontSizesEnum.Omega,
+                bgcolor: selected ? ColorsEpico.ColorSecondary100 : undefined,
+                outline: selected ? `2px solid ${ColorsEpico.ColorSecondary}` : "none",
+                outlineOffset: -2,
+                opacity: inMonth ? 1 : 0.45,
+                cursor: a.canEdit ? "pointer" : "default",
+              }}
+            >
+              <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Epsilon} sx={{ mb: 0.5 }}>{d.getDate()}</Typography>
+              {dayEvents.slice(0, 3).map((e) => (
+                <Box
+                  key={String(e.id)}
+                  onClick={(x) => { x.stopPropagation(); a.setDetail({ event: e }); }}
+                  sx={{ ...itemSx, p: 0.5, mb: 0.5, cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                >
+                  {e.time} {a.eventLabel(e)}
+                </Box>
               ))}
-              {d === 22 && evs.length > 3 && <Typography fontSize={FontSizesEnum.Omega} color={ColorsEpico.ColorSecondary}>+{evs.length - 3} más</Typography>}
-              {d === 23 && <Box sx={{ ...itemSx, p: 0.5 }}>10:00 Rines MX</Box>}
+              {dayEvents.length > 3 && <Typography fontSize={FontSizesEnum.Omega} color={ColorsEpico.ColorSecondary}>+{dayEvents.length - 3} más</Typography>}
             </Box>
           );
         })}
@@ -432,15 +509,85 @@ const MonthView = () => {
   );
 };
 
+const MiniCalendar = ({
+  selectedDate,
+  onSelect,
+  onToday,
+}: {
+  selectedDate: Date;
+  onSelect: (date: Date) => void;
+  onToday: () => void;
+}) => {
+  const [cursor, setCursor] = useState(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+
+  useEffect(() => {
+    setCursor(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+  }, [selectedDate]);
+
+  const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+  const offset = (first.getDay() + 6) % 7;
+  const start = new Date(cursor.getFullYear(), cursor.getMonth(), 1 - offset);
+  const days = Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+
+  return (
+    <Box sx={{ width: 300, p: 1.5 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+        <IconButton size="small" onClick={() => setCursor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}><ChevronLeft fontSize="small" /></IconButton>
+        <Typography fontWeight={FontWeightEnum.Bold} sx={{ textTransform: "capitalize" }}>{formatMonth(cursor)}</Typography>
+        <IconButton size="small" onClick={() => setCursor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}><ChevronRight fontSize="small" /></IconButton>
+      </Stack>
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0.25 }}>
+        {["L", "M", "M", "J", "V", "S", "D"].map((x, i) => (
+          <Typography key={i} textAlign="center" fontSize={FontSizesEnum.Omega} fontWeight={FontWeightEnum.Bold}>{x}</Typography>
+        ))}
+        {days.map((d) => {
+          const sameMonth = d.getMonth() === cursor.getMonth();
+          const selected = isoDate(d) === isoDate(selectedDate);
+          const today = isoDate(d) === isoDate(new Date());
+          return (
+            <ButtonBase
+              key={isoDate(d)}
+              onClick={() => onSelect(d)}
+              sx={{
+                minWidth: 34,
+                height: 34,
+                borderRadius: "50%",
+                fontSize: FontSizesEnum.Epsilon,
+                opacity: sameMonth ? 1 : 0.4,
+                bgcolor: selected ? ColorsEpico.ColorSecondary100 : undefined,
+                border: selected ? `1px solid ${ColorsEpico.ColorSecondary}` : today ? `1px solid ${ColorsEpico.ColorGrayNeutral}` : "1px solid transparent",
+              }}
+            >
+              {d.getDate()}
+            </ButtonBase>
+          );
+        })}
+      </Box>
+      <Button size="small" startIcon={<TodayOutlined />} onClick={onToday} sx={{ mt: 1, textTransform: "none" }}>Hoy</Button>
+    </Box>
+  );
+};
+
 export const CalendarPanel = () => {
   const a = useAgenda();
   const { view, setView } = a;
   const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
+  const [calendarAnchor, setCalendarAnchor] = useState<HTMLElement | null>(null);
   const title = periodTitle(view, selectedDate);
 
   useEffect(() => {
     a.setSelectedDate(isoDate(selectedDate));
   }, [a.setSelectedDate, selectedDate]);
+
+  const goToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    a.setSelectedGridSlot({ date: isoDate(today) });
+  };
 
   return (
     <Box>
@@ -451,12 +598,20 @@ export const CalendarPanel = () => {
           <Tab value="month" label="Mes" />
         </Tabs>
         <Stack direction="row" alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }} sx={{ flex: 1, minWidth: 0, width: { xs: "100%", sm: "auto" } }}>
+          <Button size="small" variant="outlined" startIcon={<TodayOutlined />} onClick={goToday} sx={{ mr: 0.5, textTransform: "none", borderRadius: "4px" }}>Hoy</Button>
           <IconButton size="small" aria-label="Periodo anterior" onClick={() => setSelectedDate((d) => movePeriod(view, d, -1))}>
             <ChevronLeft />
           </IconButton>
-          <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta} textAlign="center" sx={{ px: 0.5, minWidth: 0, flex: { xs: 1, sm: "0 1 auto" }, textTransform: "capitalize" }}>
-            {title}
-          </Typography>
+          <ButtonBase
+            onClick={(e) => setCalendarAnchor(e.currentTarget)}
+            aria-label="Abrir selector de fecha"
+            sx={{ px: 0.75, py: 0.5, minWidth: 0, borderRadius: "4px", "&:hover": { bgcolor: ColorsEpico.ColorNeutro } }}
+          >
+            <CalendarMonthOutlined sx={{ fontSize: 18, mr: 0.5, color: ColorsEpico.ColorBlack60 }} />
+            <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta} textAlign="center" sx={{ minWidth: 0, textTransform: "capitalize" }}>
+              {title}
+            </Typography>
+          </ButtonBase>
           <IconButton size="small" aria-label="Periodo siguiente" onClick={() => setSelectedDate((d) => movePeriod(view, d, 1))}>
             <ChevronRight />
           </IconButton>
@@ -464,8 +619,22 @@ export const CalendarPanel = () => {
         <Box sx={{ pb: { xs: 1, sm: 0 } }}><Legend /></Box>
       </Stack>
 
+      <Popover
+        open={!!calendarAnchor}
+        anchorEl={calendarAnchor}
+        onClose={() => setCalendarAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <MiniCalendar
+          selectedDate={selectedDate}
+          onSelect={(d) => { setSelectedDate(d); a.setSelectedGridSlot({ date: isoDate(d) }); setCalendarAnchor(null); }}
+          onToday={() => { goToday(); setCalendarAnchor(null); }}
+        />
+      </Popover>
+
       <GapMarker placement="bottom" label="No existe en Épico ni en MUI core: vista de calendario Día/Semana/Mes. Requiere decisión de Arquitectura (librería o desarrollo propio).">
-        {view === "day" ? <DayView selectedDate={selectedDate} /> : view === "week" ? <WeekView selectedDate={selectedDate} /> : <MonthView />}
+        {view === "day" ? <DayView selectedDate={selectedDate} /> : view === "week" ? <WeekView selectedDate={selectedDate} /> : <MonthView selectedDate={selectedDate} />}
       </GapMarker>
     </Box>
   );
