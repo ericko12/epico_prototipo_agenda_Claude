@@ -10,7 +10,7 @@ import {
 import { clientKey, endMin, hhmm, initialProfiles, mins, nowMx, ROLE_EXPLANATION } from "@/features/agenda/domain/agenda.data";
 
 export interface RouteStop { c: Client; hh: string; travel: number }
-export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; time?: string; startAfterCreate: boolean; seed: number }
+export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; date?: string; time?: string; startAfterCreate: boolean; seed: number }
 export interface DetailState { event: AgendaEvent | null; visitNowCreated?: boolean }
 type Snack = { msg: string; severity: "success" | "warning" | "error" | "info" } | null;
 
@@ -252,16 +252,42 @@ function useAgendaState() {
     return { e, text: d === 0 ? "En horario" : d > 0 ? `+${d} min tarde` : `${Math.abs(d)} min antes` };
   });
 
-  // ---------- eventos: alta / edición / cancelación ----------
-  const openForm = (opts: Partial<Pick<FormState, "client" | "address" | "time" | "startAfterCreate" | "title">> = {}) => {
-    if (!canEdit) return;
-    setForm({ open: true, editingId: null, title: opts.title ?? "Nuevo evento", client: opts.client, address: opts.address, time: opts.time, startAfterCreate: !!opts.startAfterCreate, seed: Date.now() });
+  const resolveNewVisitDrop = (date: string, time: string): { time: string; adjusted: boolean } | null => {
+    const today = todayIso();
+    if (date < today) {
+      setSnack({ severity: "error", msg: "No puedes programar una visita en un horario pasado." });
+      return null;
+    }
+    if (date > today) return { time, adjusted: false };
+
+    const now = currentMinute();
+    const requested = mins(time);
+    if (requested >= now) return { time, adjusted: false };
+
+    const requestedHour = Math.floor(requested / 60);
+    const currentHour = Math.floor(now / 60);
+    if (requestedHour !== currentHour) {
+      setSnack({ severity: "error", msg: "No puedes programar una visita en un horario pasado." });
+      return null;
+    }
+
+    const nextFive = Math.floor(now / 5) * 5 + 5;
+    setSnack({ severity: "info", msg: `La hora se ajustó a ${hhmm(nextFive)} porque el horario seleccionado ya inició.` });
+    return { time: hhmm(nextFive), adjusted: true };
   };
-  const openEdit = (e: AgendaEvent) => { setDetail({ event: null }); setForm({ open: true, editingId: e.id, title: "Editar / reprogramar visita", client: e.title, address: e.address, time: e.time, startAfterCreate: false, seed: Date.now() }); };
+
+  // ---------- eventos: alta / edición / cancelación ----------
+  const openForm = (opts: Partial<Pick<FormState, "client" | "address" | "date" | "time" | "startAfterCreate" | "title">> = {}) => {
+    if (!canEdit) return;
+    setForm({ open: true, editingId: null, title: opts.title ?? "Nuevo evento", client: opts.client, address: opts.address, date: opts.date, time: opts.time, startAfterCreate: !!opts.startAfterCreate, seed: Date.now() });
+  };
+  const openEdit = (e: AgendaEvent) => { setDetail({ event: null }); setForm({ open: true, editingId: e.id, title: "Editar / reprogramar visita", client: e.title, address: e.address, date: e.date, time: e.time, startAfterCreate: false, seed: Date.now() }); };
   const closeForm = () => setForm((f) => ({ ...f, open: false, editingId: null }));
   /** Devuelve un mensaje de error o null si se guardó. */
   const saveEvent = (v: { type: AgendaEvent["activityType"]; client: string; address: string; date: string; time: string; duration: number; quote: string; description: string }): string | null => {
     if (!Number.isFinite(v.duration) || v.duration <= 0) return "Captura una duración mayor que cero.";
+    const today = todayIso();
+    if (v.date < today || (v.date === today && mins(v.time) < currentMinute())) return "No puedes programar una visita en un horario pasado.";
     const prev = form.editingId != null ? events.find((x) => x.id === form.editingId) : undefined;
     const n: AgendaEvent = {
       id: form.editingId ?? Date.now(), title: v.client, address: v.address, time: v.time, duration: v.duration, kind: "planned", status: "Programada",
@@ -407,7 +433,7 @@ function useAgendaState() {
   return {
     profiles, owner, setOwner, profile, events, tasks, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
     view, setView, selectedDate, setSelectedDate, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
-    canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel,
+    canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, resolveNewVisitDrop,
     routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
     cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
     scenarioMsg, loadOpenVisitScenario, openVisits, regularize, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
