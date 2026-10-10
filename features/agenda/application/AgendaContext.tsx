@@ -25,6 +25,7 @@ function useAgendaState() {
   const [managerCanEdit, setManagerCanEdit] = useState(true);
   const [detailVisibility, setDetailVisibility] = useState<DetailVisibility>("full");
   const [view, setView] = useState<View>("day");
+  const [selectedGridSlot, setSelectedGridSlot] = useState<{ date: string; time?: string } | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -432,7 +433,7 @@ function useAgendaState() {
 
   return {
     profiles, owner, setOwner, profile, events, tasks, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
-    view, setView, selectedDate, setSelectedDate, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
+    view, setView, selectedDate, setSelectedDate, selectedGridSlot, setSelectedGridSlot, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, resolveNewVisitDrop,
     routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
     cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
