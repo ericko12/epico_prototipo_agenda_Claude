@@ -1,6 +1,6 @@
 "use client";
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Divider, IconButton, InputAdornment, MenuItem, Stack, TextField, Typography } from "@mui/material";
-import { ArrowDownward, ArrowUpward, DragIndicator, ExpandMore, Search } from "@mui/icons-material";
+import { ArrowDownward, ArrowUpward, Close, DragIndicator, ExpandMore, Search } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
@@ -71,7 +71,7 @@ const RouteBox = () => {
   return (
     <Box sx={{ mt: 1.5, p: 1.5, border: `1px solid ${ColorsEpico.ColorGrayNeutral}`, borderRadius: "8px", bgcolor: ColorsEpico.ColorNeutro }}>
       <SectionTitle sx={{ fontSize: FontSizesEnum.Delta }}>Orden de visita</SectionTitle>
-      <Hint>La primera posición define el inicio. Los horarios se sugieren según la disponibilidad futura del día visible en Agenda; hoy nunca propone horarios anteriores a la hora actual.</Hint>
+      <Hint>La primera posición define el inicio. Puedes reordenar o quitar destinos antes de agregar la ruta. Los horarios se recalculan según la disponibilidad futura del día visible en Agenda.</Hint>
 
       <Box sx={{ mt: 1 }}>
         {a.routePlan!.map((x, i) => (
@@ -86,6 +86,7 @@ const RouteBox = () => {
             <Stack>
               <IconButton size="small" aria-label="Subir" disabled={i === 0} onClick={() => a.moveStop(i, -1)}><ArrowUpward fontSize="inherit" /></IconButton>
               <IconButton size="small" aria-label="Bajar" disabled={i === a.routePlan!.length - 1} onClick={() => a.moveStop(i, 1)}><ArrowDownward fontSize="inherit" /></IconButton>
+              <IconButton size="small" aria-label={`Quitar ${x.c[0]} de la ruta`} title="Quitar de la ruta" onClick={() => a.removeStop(i)}><Close fontSize="inherit" /></IconButton>
             </Stack>
           </Stack>
         ))}
