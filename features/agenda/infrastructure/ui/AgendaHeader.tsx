@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Alert, Box, Button, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Typography } from "@mui/material";
+import { Box, Button, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Typography } from "@mui/material";
 import { Add, ArrowDropDown, BoltOutlined, EventOutlined, TaskAltOutlined } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
@@ -31,10 +31,6 @@ export const AgendaHeader = () => {
           </>
         )}
       </Stack>
-      <Alert severity="warning" variant="outlined" sx={{ mt: 1.5, fontSize: FontSizesEnum.Epsilon, bgcolor: ColorsEpico.ColorSoftBeige }}>
-        <b>Simulador funcional de Discovery · V8.2 integrado en Épico (versión sintética).</b> Incluye propuesta de ruta, comparación planeado/real, detalle flotante de actividades y reglas de visitas abiertas.
-        Mapa real, tráfico real y navegación quedan fuera de esta simulación; su viabilidad/costo debe revisarse con Arquitectura y negocio.
-      </Alert>
     </>
   );
 };
