@@ -245,7 +245,9 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
         }
         try {
           const d = JSON.parse(e.dataTransfer.getData("application/json"));
-          a.openForm({ client: d.name, address: d.address, time });
+          const resolved = a.resolveNewVisitDrop(selectedIso, time);
+          if (!resolved) return;
+          a.openForm({ client: d.name, address: d.address, date: selectedIso, time: resolved.time });
         } catch {
           /* sin datos */
         }
