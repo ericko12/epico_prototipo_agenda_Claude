@@ -1,8 +1,7 @@
 "use client";
-import { Autocomplete, Box, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Autocomplete, InputAdornment, Paper, Stack, TextField } from "@mui/material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
-import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
-import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
+import SearchIcon from "@mui/icons-material/Search";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { OwnerId } from "@/features/agenda/domain/agenda.types";
 
@@ -17,19 +16,14 @@ export const AgendaVisibleFilter = () => {
     <Paper
       elevation={0}
       sx={{
-        mt: 2,
-        p: 1.5,
+        mt: 1.5,
+        p: 1,
         border: `1px solid ${ColorsEpico.ColorLightBlueishGray}`,
         borderRadius: "8px",
         bgcolor: ColorsEpico.ColorWhite,
       }}
     >
-      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "stretch", sm: "center" }} gap={1.5}>
-        <Box sx={{ minWidth: { sm: 120 } }}>
-          <Typography fontSize={FontSizesEnum.Epsilon} fontWeight={FontWeightEnum.Bold} color={ColorsEpico.ColorDarkCharcoal}>
-            Filtros
-          </Typography>
-        </Box>
+      <Stack direction={{ xs: "column", md: "row" }} alignItems={{ xs: "stretch", md: "center" }} gap={1.25}>
         <Autocomplete
           size="small"
           options={options}
@@ -38,7 +32,7 @@ export const AgendaVisibleFilter = () => {
           onChange={(_, option) => option && a.setOwner(option.id)}
           getOptionLabel={(option) => option.label}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          sx={{ minWidth: { xs: "100%", sm: 320 }, maxWidth: 460 }}
+          sx={{ minWidth: { xs: "100%", md: 320 }, maxWidth: { md: 460 } }}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -47,6 +41,14 @@ export const AgendaVisibleFilter = () => {
             />
           )}
           noOptionsText="Sin coincidencias"
+        />
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Buscar visita, cliente, actividad..."
+          value={a.search}
+          onChange={(e) => a.setSearch(e.target.value)}
+          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
         />
       </Stack>
     </Paper>
