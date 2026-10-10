@@ -8,7 +8,7 @@ import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 
 export const AgendaHeader = () => {
-  const { canEdit, openForm, setTaskFormOpen } = useAgenda();
+  const { canEdit, openForm, setTaskFormOpen, selectedGridSlot } = useAgenda();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = () => setAnchor(null);
   return (
@@ -24,8 +24,8 @@ export const AgendaHeader = () => {
               Crear
             </Button>
             <Menu anchorEl={anchor} open={!!anchor} onClose={close} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }} slotProps={{ paper: { sx: { minWidth: 220 } } }}>
-              <MenuItem onClick={() => { close(); openForm(); }}><ListItemIcon><EventOutlined fontSize="small" /></ListItemIcon><ListItemText>Evento</ListItemText></MenuItem>
-              <MenuItem onClick={() => { close(); openForm({ startAfterCreate: true, title: "Crear evento para visita ahora" }); }}><ListItemIcon><BoltOutlined fontSize="small" /></ListItemIcon><ListItemText>Visita no planeada</ListItemText></MenuItem>
+              <MenuItem onClick={() => { close(); openForm(selectedGridSlot ? { date: selectedGridSlot.date, time: selectedGridSlot.time } : {}); }}><ListItemIcon><EventOutlined fontSize="small" /></ListItemIcon><ListItemText>Evento</ListItemText></MenuItem>
+              <MenuItem onClick={() => { close(); openForm({ ...(selectedGridSlot ? { date: selectedGridSlot.date, time: selectedGridSlot.time } : {}), startAfterCreate: true, title: "Crear evento para visita ahora" }); }}><ListItemIcon><BoltOutlined fontSize="small" /></ListItemIcon><ListItemText>Visita no planeada</ListItemText></MenuItem>
               <MenuItem onClick={() => { close(); setTaskFormOpen(true); }}><ListItemIcon><TaskAltOutlined fontSize="small" /></ListItemIcon><ListItemText>Tarea</ListItemText></MenuItem>
             </Menu>
           </>
