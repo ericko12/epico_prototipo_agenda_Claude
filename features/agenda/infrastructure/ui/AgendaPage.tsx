@@ -26,10 +26,17 @@ const AgendaContent = () => {
   useSetBreadcrumb(["Rutas + Agenda", "Agenda"]);
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, pb: { xs: 10, md: 10 } }}>
-      <AgendaHeader />
+      <Alert severity="warning" variant="outlined" sx={{ fontSize: FontSizesEnum.Epsilon, bgcolor: ColorsEpico.ColorSoftBeige }}>
+        <b>Simulador funcional de Discovery · V8.2 integrado en Épico (versión sintética).</b> Incluye propuesta de ruta, comparación planeado/real, detalle flotante de actividades y reglas de visitas abiertas.
+        Mapa real, tráfico real y navegación quedan fuera de esta simulación; su viabilidad/costo debe revisarse con Arquitectura y negocio.
+      </Alert>
       <SimulationControls />
-      <AgendaVisibleFilter />
-      <SummaryMetrics />
+
+      <Box sx={{ mt: 3 }}>
+        <AgendaHeader />
+        <SummaryMetrics />
+        <AgendaVisibleFilter />
+      </Box>
       <Box sx={{ mt: 2, display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 340px" }, border: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, borderRadius: "8px", overflow: "hidden", bgcolor: ColorsEpico.ColorWhite }}>
         <Box sx={{ minWidth: 0 }}><CalendarPanel /></Box>
         <Box sx={{ borderLeft: { lg: `1px solid ${ColorsEpico.ColorLightBlueishGray}` }, borderTop: { xs: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, lg: 0 }, maxHeight: { lg: 1000 }, overflowY: { lg: "auto" } }}>
