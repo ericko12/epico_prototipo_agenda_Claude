@@ -205,6 +205,23 @@ function useAgendaState() {
     setRoutePlan(formatRoute(arr));
   };
 
+  const removeStop = (i: number) => {
+    if (!routePlan) return;
+    const removed = routePlan[i];
+    if (!removed) return;
+
+    const remaining = routePlan.filter((_, index) => index !== i).map((x) => x.c);
+    setRouteSel((selected) => selected.filter((key) => key !== clientKey(removed.c)));
+
+    if (remaining.length < 2) {
+      setRoutePlan(null);
+      setRouteMsg("Se requieren al menos 2 destinos para sugerir una ruta.");
+      return;
+    }
+
+    setRoutePlan(formatRoute(remaining));
+  };
+
   const applyRoute = () => {
     if (!routePlan) return;
     const proposed: AgendaEvent[] = routePlan.map((x, i) => ({
@@ -435,7 +452,7 @@ function useAgendaState() {
     profiles, owner, setOwner, profile, events, tasks, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
     view, setView, selectedDate, setSelectedDate, selectedGridSlot, setSelectedGridSlot, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, resolveNewVisitDrop,
-    routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
+    routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, removeStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
     cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
     scenarioMsg, loadOpenVisitScenario, openVisits, regularize, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
   };
