@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import {
   AgendaEvent, AgendaTask, Client, DetailVisibility, OwnerId, OwnerProfile, Role, Scope, SummaryFilter, View,
 } from "@/features/agenda/domain/agenda.types";
-import { clientKey, endMin, hhmm, initialProfiles, mins, nowMx, ROLE_EXPLANATION } from "@/features/agenda/domain/agenda.data";
+import { clientKey, endMin, eventDateOf, hhmm, initialProfiles, mins, nowMx, periodLabel, ROLE_EXPLANATION, todayIso as todayIsoData, visibleRange } from "@/features/agenda/domain/agenda.data";
 
 export interface RouteStop { c: Client; hh: string; travel: number }
 export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; date?: string; time?: string; startAfterCreate: boolean; seed: number }
@@ -89,13 +89,7 @@ function useAgendaState() {
   const toggleRouteSel = (key: string) => setRouteSel((s) => (s.includes(key) ? s.filter((k) => k !== key) : [...s, key]));
 
   // ---------- ruta sugerida (primer destino = punto de partida) ----------
-  const todayIso = () => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
+  const todayIso = todayIsoData;
 
   const currentMinute = () => {
     const now = new Date();
@@ -109,7 +103,7 @@ function useAgendaState() {
         !e.absence &&
         e.activityType === "visit" &&
         e.kind === "planned" &&
-        (e.date ?? "2026-09-22") === selectedDate
+        eventDateOf(e) === selectedDate
       )
       .map((e) => ({ start: mins(e.time), end: mins(e.time) + e.duration }))
       .sort((a, b) => a.start - b.start);
@@ -242,7 +236,7 @@ function useAgendaState() {
         !x.absence &&
         x.status !== "Cancelada" &&
         x.activityType !== "internal" &&
-        (x.date ?? "2026-09-22") === e.date &&
+        eventDateOf(x) === e.date &&
         overlaps(e, x)
       )
       || proposed.slice(0, i).some((x) => x.date === e.date && overlaps(e, x))
@@ -264,7 +258,12 @@ function useAgendaState() {
     if (f === "late") return e.kind === "realized" && !!e.planned && timeDiff(e.planned, e.time) > 0;
     return true;
   }, [events]);
-  const activeEvents = events.filter((e) => e.status !== "Cancelada");
+  // El resumen cuenta solo el periodo visible del calendario (día / semana / mes),
+  // para que los indicadores coincidan con lo que el usuario ve.
+  const [rangeFrom, rangeTo] = visibleRange(view, selectedDate);
+  const inVisibleRange = (e: AgendaEvent) => { const d = eventDateOf(e); return d >= rangeFrom && d <= rangeTo; };
+  const activeEvents = events.filter((e) => e.status !== "Cancelada" && inVisibleRange(e));
+  const summaryPeriod = periodLabel(view, selectedDate);
   const summary = {
     planned: activeEvents.filter((e) => matches(e, "planned")).length,
     done: activeEvents.filter((e) => matches(e, "done")).length,
@@ -348,7 +347,7 @@ function useAgendaState() {
           !x.absence &&
           x.status !== "Cancelada" &&
           x.activityType === "visit" &&
-          (x.date ?? "2026-09-22") === date &&
+          eventDateOf(x) === date &&
           overlaps(candidate, x)
         )
       : null;
@@ -457,7 +456,7 @@ function useAgendaState() {
 
   return {
     profiles, owner, setOwner, profile, events, tasks, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
-    view, setView, selectedDate, setSelectedDate, selectedGridSlot, setSelectedGridSlot, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
+    view, setView, selectedDate, setSelectedDate, selectedGridSlot, setSelectedGridSlot, summaryFilter, setSummaryFilter, matches, summary, summaryPeriod, deviations, portfolioScope, setPortfolioScope, search, setSearch,
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, resolveNewVisitDrop,
     routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, removeStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
     cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,

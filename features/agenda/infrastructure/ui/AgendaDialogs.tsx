@@ -9,7 +9,7 @@ import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
-import { clientId, normalize } from "@/features/agenda/domain/agenda.data";
+import { clientId, eventDateOf, normalize, todayIso } from "@/features/agenda/domain/agenda.data";
 import { ActivityType } from "@/features/agenda/domain/agenda.types";
 import { EpicoLabel, Hint, statusVariant } from "./shared";
 
@@ -204,7 +204,7 @@ export const EventDetailDialog = () => {
 export const EventFormDialog = () => {
   const a = useAgenda();
   const f = a.form;
-  const [v, setV] = useState({ type: "visit" as ActivityType, client: "", address: "", date: "2026-09-22", time: "10:30", duration: "30", quote: "", description: "" });
+  const [v, setV] = useState({ type: "visit" as ActivityType, client: "", address: "", date: todayIso(), time: "10:30", duration: "30", quote: "", description: "" });
   const [error, setError] = useState<string | null>(null);
   const [clientQuery, setClientQuery] = useState("");
   useEffect(() => {
@@ -214,7 +214,7 @@ export const EventFormDialog = () => {
     const initialClient = f.client ?? editing?.title ?? firstPortfolio?.[0] ?? "";
     const initialAddress = f.address ?? editing?.address ?? a.visiblePortfolio.find((x) => x[0] === initialClient)?.[1] ?? firstPortfolio?.[1] ?? "";
     setV({
-      type: editing?.activityType ?? "visit", client: initialClient, address: initialAddress, date: f.date ?? editing?.date ?? new Date().toISOString().slice(0, 10),
+      type: editing?.activityType ?? "visit", client: initialClient, address: initialAddress, date: f.date ?? (editing ? eventDateOf(editing) : todayIso()),
       time: f.time ?? "10:30", duration: String(editing?.duration ?? 30), quote: editing?.quote ?? "", description: editing?.description ?? "",
     });
     setClientQuery(initialClient);

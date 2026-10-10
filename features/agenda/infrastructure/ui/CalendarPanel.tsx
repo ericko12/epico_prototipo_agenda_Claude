@@ -1,17 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, ButtonBase, Chip, IconButton, Popover, Stack, Tab, Tabs, Typography } from "@mui/material";
-import { CalendarMonthOutlined, ChevronLeft, ChevronRight, TodayOutlined } from "@mui/icons-material";
+import { Add, CalendarMonthOutlined, ChevronLeft, ChevronRight, EventBusyOutlined, TodayOutlined } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
-import { DAY_HOURS, DAY_START, hhmm, mins } from "@/features/agenda/domain/agenda.data";
+import { DAY_HOURS, DAY_START, eventDateOf, hhmm, isoDate, mins, startOfWeek } from "@/features/agenda/domain/agenda.data";
 import { AgendaEvent, View } from "@/features/agenda/domain/agenda.types";
 import { AGENDA_COLORS, GapMarker } from "./shared";
 
 const INITIAL_DATE = new Date();
-const BASE_EVENT_DATE = "2026-09-22";
 const HOUR_PX = 60;
 const LABEL_W = 56;
 const CALENDAR_HEIGHT = DAY_HOURS * HOUR_PX;
@@ -25,32 +24,62 @@ const formatShortDate = (date: Date) =>
 const formatMonth = (date: Date) =>
   new Intl.DateTimeFormat("es-MX", { month: "long", year: "numeric" }).format(date);
 
-const isoDate = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+const eventDate = eventDateOf;
+
+// Solo la primera letra en mayúscula ("Sábado, 10 de octubre de 2026"), como pide la ortografía en español.
+const capitalizeFirst = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+/**
+ * Días que muestra la vista Semana: lunes a sábado (los asesores trabajan sábado).
+ * El domingo se agrega si es hoy o si tiene eventos, para que "Hoy" nunca caiga fuera de la vista.
+ */
+const weekDays = (selected: Date, events: AgendaEvent[]) => {
+  const start = startOfWeek(selected);
+  const all = Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
+  const sunday = isoDate(all[6]);
+  const showSunday = sunday === isoDate(new Date()) || events.some((e) => e.status !== "Cancelada" && eventDate(e) === sunday);
+  return showSunday ? all : all.slice(0, 6);
 };
 
-const eventDate = (e: AgendaEvent) => e.date ?? BASE_EVENT_DATE;
-
-const startOfWeek = (date: Date) => {
-  const copy = new Date(date);
-  const day = copy.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  copy.setDate(copy.getDate() + diff);
-  return copy;
+/** Mensaje centrado cuando el periodo no tiene eventos. No bloquea clics ni arrastre sobre la cuadrícula. */
+const EmptyState = ({ text, date }: { text: string; date: string }) => {
+  const a = useAgenda();
+  return (
+    <Box sx={{ position: "absolute", inset: 0, zIndex: 4, display: "flex", alignItems: "flex-start", justifyContent: "center", pt: 12, pointerEvents: "none" }}>
+      <Stack alignItems="center" spacing={1} sx={{ bgcolor: ColorsEpico.ColorWhite, border: `1px dashed ${ColorsEpico.ColorGrayNeutral}`, borderRadius: "8px", px: 3, py: 2.5, maxWidth: 340, textAlign: "center" }}>
+        <EventBusyOutlined sx={{ fontSize: 36, color: ColorsEpico.ColorNeutral }} />
+        <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta} color={ColorsEpico.ColorDarkCharcoal}>{text}</Typography>
+        {a.canEdit && (
+          <>
+            <Typography fontSize={FontSizesEnum.Epsilon} color={ColorsEpico.ColorBlack60}>
+              Arrastra un cliente al calendario o crea una visita.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<Add />}
+              disabled={date < isoDate(new Date())}
+              onClick={(e) => { e.stopPropagation(); a.openForm({ date }); }}
+              sx={{ pointerEvents: "auto", mt: 0.5 }}
+            >
+              Crear visita
+            </Button>
+          </>
+        )}
+      </Stack>
+    </Box>
+  );
 };
 
-const periodTitle = (view: View, date: Date) => {
-  if (view === "day") return formatLongDate(date);
+const periodTitle = (view: View, date: Date, lastWeekDay = 5) => {
+  if (view === "day") return capitalizeFirst(formatLongDate(date));
   if (view === "month") {
     const value = formatMonth(date);
     return value.charAt(0).toUpperCase() + value.slice(1);
   }
   const start = startOfWeek(date);
   const end = new Date(start);
-  end.setDate(start.getDate() + 4);
+  end.setDate(start.getDate() + lastWeekDay);
   return `Semana del ${formatShortDate(start)} al ${formatShortDate(end)}`;
 };
 
@@ -261,6 +290,7 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
     >
       <TimeLines />
       <CurrentTimeLine date={selectedDate} />
+      {evs.length === 0 && <EmptyState text="Sin visitas para este día" date={selectedIso} />}
       {a.selectedGridSlot?.date === selectedIso && a.selectedGridSlot.time && (
         <Box
           sx={{
@@ -327,12 +357,8 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
   const a = useAgenda();
   const bodyRef = useRef<HTMLDivElement>(null);
   const [dropHint, setDropHint] = useState<{ day: number; minute: number } | null>(null);
-  const start = startOfWeek(selectedDate);
-  const days = Array.from({ length: 5 }, (_, i) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + i);
-    return date;
-  });
+  const days = weekDays(selectedDate, a.events);
+  const weekHasEvents = days.some((d) => a.events.some((e) => e.status !== "Cancelada" && eventDate(e) === isoDate(d)));
 
   const minuteFromY = (clientY: number) => {
     const rect = bodyRef.current!.getBoundingClientRect();
@@ -342,7 +368,7 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
   return (
     <Box sx={{ overflowX: "auto" }}>
       <Box sx={{ minWidth: 760 }}>
-        <Box sx={{ display: "grid", gridTemplateColumns: `${LABEL_W}px repeat(5, minmax(135px, 1fr))`, borderBottom: `1px solid ${ColorsEpico.ColorSkyBlue}` }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: `${LABEL_W}px repeat(${days.length}, minmax(120px, 1fr))`, borderBottom: `1px solid ${ColorsEpico.ColorSkyBlue}` }}>
           <Box />
           {days.map((d) => (
             <Box key={isoDate(d)} sx={{ p: 1, textAlign: "center", borderLeft: `1px solid ${ColorsEpico.ColorSkyBlue}` }}>
@@ -353,7 +379,7 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
           ))}
         </Box>
 
-        <Box ref={bodyRef} sx={{ display: "grid", gridTemplateColumns: `${LABEL_W}px repeat(5, minmax(135px, 1fr))`, height: CALENDAR_HEIGHT, position: "relative" }}>
+        <Box ref={bodyRef} sx={{ display: "grid", gridTemplateColumns: `${LABEL_W}px repeat(${days.length}, minmax(120px, 1fr))`, height: CALENDAR_HEIGHT, position: "relative" }}>
           <Box sx={{ position: "relative", height: CALENDAR_HEIGHT, bgcolor: ColorsEpico.ColorWhite }}>
             {Array.from({ length: DAY_HOURS + 1 }, (_, i) => (
               <Typography key={i} sx={{ position: "absolute", left: 8, top: i * HOUR_PX + 2, fontSize: FontSizesEnum.Omega, color: ColorsEpico.ColorNeutralGray }}>
@@ -392,7 +418,7 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
                   position: "relative",
                   height: CALENDAR_HEIGHT,
                   borderLeft: `1px solid ${ColorsEpico.ColorSkyBlue}`,
-                  bgcolor: dateIso === BASE_EVENT_DATE ? ColorsEpico.ColorBrightBlue5 : ColorsEpico.ColorWhite,
+                  bgcolor: dateIso === isoDate(new Date()) ? ColorsEpico.ColorBrightBlue5 : ColorsEpico.ColorWhite,
                 }}
               >
                 <TimeLines left={0} />
@@ -428,7 +454,9 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
                         left: 4,
                         right: 4,
                         height: Math.max(compact ? 34 : 38, e.duration),
-                        zIndex: 2,
+                        // Las ausencias van de fondo (como en la vista Día) para no tapar las visitas del día.
+                        zIndex: e.absence ? 1 : 2,
+                        opacity: e.absence ? 0.55 : 1,
                       }}
                     >
                       <EventCard e={e} compact />
@@ -438,6 +466,12 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
               </Box>
             );
           })}
+          {!weekHasEvents && (
+            <EmptyState
+              text="Sin visitas esta semana"
+              date={days.some((d) => isoDate(d) === isoDate(new Date())) ? isoDate(new Date()) : isoDate(days[0])}
+            />
+          )}
         </Box>
       </Box>
     </Box>
@@ -577,7 +611,7 @@ export const CalendarPanel = () => {
   const { view, setView } = a;
   const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
   const [calendarAnchor, setCalendarAnchor] = useState<HTMLElement | null>(null);
-  const title = periodTitle(view, selectedDate);
+  const title = periodTitle(view, selectedDate, weekDays(selectedDate, a.events).length - 1);
 
   useEffect(() => {
     a.setSelectedDate(isoDate(selectedDate));
@@ -606,7 +640,7 @@ export const CalendarPanel = () => {
               sx={{ ml: 0.5, px: 0.75, py: 0.5, minWidth: 0, borderRadius: "4px", "&:hover": { bgcolor: ColorsEpico.ColorNeutro } }}
             >
               <CalendarMonthOutlined sx={{ fontSize: 19, mr: 0.75, color: ColorsEpico.ColorPrimary }} />
-              <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta} textAlign="left" noWrap sx={{ minWidth: 0, textTransform: "capitalize" }}>
+              <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta} textAlign="left" noWrap sx={{ minWidth: 0 }}>
                 {title}
               </Typography>
             </ButtonBase>
