@@ -241,7 +241,7 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
 
   const minuteFromY = (clientY: number) => {
     const rect = ref.current!.getBoundingClientRect();
-    return Math.max(0, Math.min(DAY_HOURS * 60 - 30, Math.round((clientY - rect.top) / 30) * 30));
+    return Math.max(0, Math.min(DAY_HOURS * 60 - 30, Math.floor((clientY - rect.top) / 30) * 30));
   };
   const dim = (e: AgendaEvent) => !!a.summaryFilter && !a.matches(e, a.summaryFilter);
   const hi = (e: AgendaEvent) => !!a.summaryFilter && a.matches(e, a.summaryFilter);
@@ -289,7 +289,6 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
         if (!a.canEdit) return;
         const minute = minuteFromY(e.clientY);
         const time = hhmm(DAY_START + minute);
-        a.setSelectedGridSlot({ date: selectedIso, time });
         a.openForm({ date: selectedIso, time, creationMode: "event" });
       }}
       sx={{ position: "relative", height: CALENDAR_HEIGHT, ml: 0, bgcolor: ColorsEpico.ColorWhite, cursor: a.canEdit ? "pointer" : "default" }}
@@ -297,22 +296,6 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
       <TimeLines />
       <CurrentTimeLine date={selectedDate} />
       {hoverHint != null && dropHint == null && <TimeSlotHover top={hoverHint} />}
-      {a.selectedGridSlot?.date === selectedIso && a.selectedGridSlot.time && (
-        <Box
-          sx={{
-            position: "absolute",
-            left: LABEL_W,
-            right: 8,
-            top: mins(a.selectedGridSlot.time) - DAY_START,
-            height: 30,
-            border: `2px solid ${ColorsEpico.ColorSecondary}`,
-            bgcolor: ColorsEpico.ColorSecondary100,
-            borderRadius: "4px",
-            pointerEvents: "none",
-            zIndex: 1,
-          }}
-        />
-      )}
       {Array.from({ length: DAY_HOURS + 1 }, (_, i) => (
         <Typography key={i} sx={{ position: "absolute", left: 8, top: i * HOUR_PX + 2, fontSize: FontSizesEnum.Omega, color: ColorsEpico.ColorNeutralGray, zIndex: 1 }}>
           {hhmm(DAY_START + i * 60)}
@@ -373,7 +356,7 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
 
   const minuteFromY = (clientY: number) => {
     const rect = bodyRef.current!.getBoundingClientRect();
-    return Math.max(0, Math.min(DAY_HOURS * 60 - 30, Math.round((clientY - rect.top) / 30) * 30));
+    return Math.max(0, Math.min(DAY_HOURS * 60 - 30, Math.floor((clientY - rect.top) / 30) * 30));
   };
 
   return (
@@ -431,7 +414,6 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
                 onClick={(e) => {
                   if (!a.canEdit) return;
                   const time = hhmm(DAY_START + minuteFromY(e.clientY));
-                  a.setSelectedGridSlot({ date: dateIso, time });
                   a.openForm({ date: dateIso, time, creationMode: "event" });
                 }}
                 sx={{
@@ -444,22 +426,6 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
                 <TimeLines left={0} />
                 <CurrentTimeLine date={d} left={0} />
                 {hoverHint?.day === dayIndex && dropHint == null && <TimeSlotHover top={hoverHint.minute} left={4} />}
-                {a.selectedGridSlot?.date === dateIso && a.selectedGridSlot.time && (
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      left: 4,
-                      right: 4,
-                      top: mins(a.selectedGridSlot.time) - DAY_START,
-                      height: 30,
-                      border: `2px solid ${ColorsEpico.ColorSecondary}`,
-                      bgcolor: ColorsEpico.ColorSecondary100,
-                      borderRadius: "4px",
-                      pointerEvents: "none",
-                      zIndex: 1,
-                    }}
-                  />
-                )}
                 {dropHint?.day === dayIndex && (
                   <Box sx={{ position: "absolute", left: 4, right: 4, top: dropHint.minute, height: 30, border: `2px dashed ${ColorsEpico.ColorSecondary}`, borderRadius: "4px", bgcolor: ColorsEpico.ColorSecondary100, zIndex: 5, pointerEvents: "none" }} />
                 )}
