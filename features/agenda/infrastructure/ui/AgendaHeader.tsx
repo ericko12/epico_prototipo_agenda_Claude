@@ -1,14 +1,14 @@
 "use client";
 import { useState } from "react";
 import { Box, Button, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Typography } from "@mui/material";
-import { Add, ArrowDropDown, BoltOutlined, EventOutlined, TaskAltOutlined } from "@mui/icons-material";
+import { Add, ArrowDropDown, BoltOutlined, EventOutlined } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 
 export const AgendaHeader = () => {
-  const { canEdit, openForm, setTaskFormOpen, selectedGridSlot } = useAgenda();
+  const { canEdit, openForm, selectedGridSlot } = useAgenda();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = () => setAnchor(null);
   return (
@@ -26,7 +26,6 @@ export const AgendaHeader = () => {
             <Menu anchorEl={anchor} open={!!anchor} onClose={close} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }} slotProps={{ paper: { sx: { minWidth: 220 } } }}>
               <MenuItem onClick={() => { close(); openForm({ ...(selectedGridSlot ? { date: selectedGridSlot.date, time: selectedGridSlot.time } : {}), creationMode: "event" }); }}><ListItemIcon><EventOutlined fontSize="small" /></ListItemIcon><ListItemText>Evento</ListItemText></MenuItem>
               <MenuItem onClick={() => { close(); openForm({ ...(selectedGridSlot ? { date: selectedGridSlot.date, time: selectedGridSlot.time } : {}), creationMode: "unplanned", startAfterCreate: true, title: "Crear visita no planeada" }); }}><ListItemIcon><BoltOutlined fontSize="small" /></ListItemIcon><ListItemText>Visita no planeada</ListItemText></MenuItem>
-              <MenuItem onClick={() => { close(); setTaskFormOpen(true); }}><ListItemIcon><TaskAltOutlined fontSize="small" /></ListItemIcon><ListItemText>Tarea</ListItemText></MenuItem>
             </Menu>
           </>
         )}
