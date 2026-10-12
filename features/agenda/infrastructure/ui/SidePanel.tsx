@@ -1,6 +1,6 @@
 "use client";
-import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Divider, IconButton, MenuItem, Stack, TextField, Typography } from "@mui/material";
-import { ArrowDownward, ArrowUpward, Close, DragIndicator, ExpandMore } from "@mui/icons-material";
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Divider, IconButton, InputAdornment, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { ArrowDownward, ArrowUpward, Close, DragIndicator, ExpandMore, Search } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
 import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
@@ -17,7 +17,7 @@ const Portfolio = () => {
   return (
     <GapMarker label="Arrastrar cliente al calendario: no existe en Épico (patrón nuevo)">
       <Box sx={{ mt: 1, pt: { xs: 0, md: a.showGaps ? 5 : 0 } }}>
-        {list.length === 0 && <Hint>Sin resultados. Escribe al menos 3 caracteres.</Hint>}
+        {list.length === 0 && <Hint>{q.length > 0 && q.length < 3 ? "Escribe al menos 3 caracteres." : "No se encontraron clientes con ese criterio."}</Hint>}
         {list.map((c) => {
           const key = clientKey(c);
           return (
@@ -108,12 +108,22 @@ export const SidePanel = () => {
   return (
     <Box sx={{ p: 2 }}>
       <SectionTitle>Clientes para agenda</SectionTitle>
-      <Hint>Busca por Cliente ID, razón social o dirección. Arrastra un cliente al calendario o haz clic para agendar.</Hint>
-      <TextField select fullWidth size="small" label="Alcance" value={a.role === "advisor" ? "own" : a.portfolioScope} disabled={a.role === "advisor"} onChange={(e) => { a.setPortfolioScope(e.target.value as "own" | "team"); }} sx={{ mt: 1.5 }}>
+      <Hint>Busca un cliente y arrástralo al calendario o haz clic para agendar.</Hint>
+      <TextField
+        fullWidth
+        size="small"
+        label="Buscar cliente"
+        placeholder="Cliente ID, nombre fiscal o dirección"
+        value={a.search}
+        onChange={(e) => a.setSearch(e.target.value)}
+        helperText={a.search.trim().length > 0 && a.search.trim().length < 3 ? "Escribe al menos 3 caracteres." : " "}
+        slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+        sx={{ mt: 1.5 }}
+      />
+      <TextField select fullWidth size="small" label="Alcance" value={a.role === "advisor" ? "own" : a.portfolioScope} disabled={a.role === "advisor"} onChange={(e) => { a.setPortfolioScope(e.target.value as "own" | "team"); }} sx={{ mt: 0.5 }}>
         <MenuItem value="own">Mi cartera</MenuItem>
         <MenuItem value="team">Clientes del equipo / jerarquía</MenuItem>
       </TextField>
-      {a.portfolioScope === "team" && a.role !== "advisor" && <Hint sx={{ mt: 0.5 }}>Clientes visibles por jerarquía. En esta propuesta la cobertura extraordinaria la realiza el Gestor de equipo; un asesor no toma libremente la cartera de otro.</Hint>}
       {!a.routePlan ? (
         <>
           <Typography fontSize={FontSizesEnum.Omega} color={selCount ? ColorsEpico.ColorSecondary : ColorsEpico.ColorBlack60} fontWeight={selCount ? FontWeightEnum.Bold : 500} sx={{ mt: 1 }}>
