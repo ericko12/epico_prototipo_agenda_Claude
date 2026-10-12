@@ -34,8 +34,8 @@ const AgendaContent = () => {
 
       <Box sx={{ mt: 3 }}>
         <AgendaHeader />
-        <SummaryMetrics />
         <AgendaVisibleFilter />
+        <SummaryMetrics />
       </Box>
       <Box sx={{ mt: 2, display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 340px" }, border: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, borderRadius: "8px", overflow: "hidden", bgcolor: ColorsEpico.ColorWhite }}>
         <Box sx={{ minWidth: 0 }}><CalendarPanel /></Box>
