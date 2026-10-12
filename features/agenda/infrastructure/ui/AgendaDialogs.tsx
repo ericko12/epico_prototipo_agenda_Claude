@@ -2,7 +2,7 @@
 // Diálogos con la misma estructura que features/common/infrastructure/ui/dialog/ModalGeneric.tsx:
 // título en mayúsculas, ícono de cierre, botón "Cerrar/Cancelar" outlined y acción principal contained.
 import { useEffect, useState } from "react";
-import { Alert, Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Autocomplete, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
@@ -47,7 +47,7 @@ const activityTypeLabel = (type?: ActivityType) =>
   type === "internal" ? "Otra actividad" :
   "Visita a cliente";
 
-type CreationSelectorValue = "event" | "unplanned" | "task";
+type CreationSelectorValue = "event" | "unplanned";
 const CreationTypeSelector = ({ value, onChange }: { value: CreationSelectorValue; onChange: (value: CreationSelectorValue) => void }) => (
   <TextField
     select
@@ -60,7 +60,6 @@ const CreationTypeSelector = ({ value, onChange }: { value: CreationSelectorValu
   >
     <MenuItem value="event">Evento</MenuItem>
     <MenuItem value="unplanned">Visita no planeada</MenuItem>
-    <MenuItem value="task">Tarea</MenuItem>
   </TextField>
 );
 
@@ -138,7 +137,6 @@ export const EventDetailDialog = () => {
       <Stack direction="row" gap={1} flexWrap="wrap">
         <EpicoLabel variant={e.kind === "planned" ? "info" : "success"}>{e.kind === "planned" ? "Planeado" : "Ejecutado"}</EpicoLabel>
         <EpicoLabel variant={statusVariant(e.status)}>{e.status}</EpicoLabel>
-        {e.routeSuggested && <Box title="Ruta sugerida"><EpicoLabel variant="eta">RS</EpicoLabel></Box>}
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "stretch", sm: "center" }} justifyContent="space-between" gap={1.5} sx={{ mt: 2 }}>
@@ -254,11 +252,6 @@ export const EventFormDialog = () => {
   const creationMode: CreationSelectorValue = f.creationMode ?? (f.startAfterCreate ? "unplanned" : "event");
   const changeCreationMode = (next: CreationSelectorValue) => {
     setError(null);
-    if (next === "task") {
-      a.closeForm();
-      a.setTaskFormOpen(true);
-      return;
-    }
     a.setFormCreationMode(next);
     if (next === "unplanned") setV((current) => ({ ...current, type: "visit" }));
   };
@@ -347,48 +340,6 @@ export const EventFormDialog = () => {
         </Stack>
         <TextField fullWidth size="small" multiline minRows={2} label="Descripción / detalle" placeholder="Información relevante" value={v.description} onChange={set("description")} />
         {error && <Alert severity="error" variant="outlined">{error}</Alert>}
-      </Stack>
-    </EpicoDialog>
-  );
-};
-
-export const TaskFormDialog = () => {
-  const a = useAgenda();
-  const init = { subject: "", detail: "", client: "Sin cliente", due: "2026-09-23", owner: "Luis Galvan", origin: "Manual", requiresEvidence: false };
-  const [v, setV] = useState(init);
-  useEffect(() => { if (a.taskFormOpen) setV(init); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [a.taskFormOpen]);
-  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((p) => ({ ...p, [k]: e.target.value }));
-  const close = () => a.setTaskFormOpen(false);
-  const changeCreationMode = (next: CreationSelectorValue) => {
-    if (next === "task") return;
-    close();
-    a.openForm({
-      ...(a.selectedGridSlot ? { date: a.selectedGridSlot.date, time: a.selectedGridSlot.time } : {}),
-      creationMode: next,
-      startAfterCreate: next === "unplanned",
-      title: next === "unplanned" ? "Crear visita no planeada" : "Nuevo evento",
-    });
-  };
-  return (
-    <EpicoDialog open={a.taskFormOpen} title="Crear actividad" onClose={close}
-      actions={<><Button variant="outlined" onClick={close} sx={closeBtnSx}>Cancelar</Button><Button variant="contained" disabled={!v.subject.trim()} onClick={() => a.addTask(v)} sx={saveBtnSx}>Crear tarea</Button></>}>
-      <Stack spacing={2} sx={{ pt: 1 }}>
-        <CreationTypeSelector value="task" onChange={changeCreationMode} />
-        <TextField fullWidth size="small" required label="Asunto" placeholder="Ej. Enviar cotización solicitada" value={v.subject} onChange={set("subject")} />
-        <TextField fullWidth size="small" multiline minRows={3} label="Detalle / descripción" placeholder="Describe qué debe realizarse" value={v.detail} onChange={set("detail")} />
-        <Stack direction="row" spacing={2}>
-          <TextField select fullWidth size="small" label="Cliente relacionado" value={v.client} onChange={set("client")}>{["Sin cliente", "Refaccionaria El Volante", "Autopartes del Bajío", "Frenos Lara"].map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}</TextField>
-          <TextField fullWidth size="small" type="date" label="Fecha límite" value={v.due} onChange={set("due")} slotProps={{ inputLabel: { shrink: true } }} />
-        </Stack>
-        <Stack direction="row" spacing={2}>
-          <TextField select fullWidth size="small" label="Responsable" value={v.owner} onChange={set("owner")}>{["Luis Galvan", "Equipo Operaciones", "Gerente"].map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}</TextField>
-          <TextField select fullWidth size="small" label="Origen" value={v.origin} onChange={set("origin")}>{["Manual", "Visita", "Proceso"].map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}</TextField>
-        </Stack>
-        <Box>
-          <FormControlLabel control={<Checkbox size="small" checked={v.requiresEvidence} onChange={(e) => setV((p) => ({ ...p, requiresEvidence: e.target.checked }))} />} label={<Typography fontSize={FontSizesEnum.Delta}>Requerir evidencia al completar</Typography>} />
-          <Hint>Si se marca, la tarea deberá tener foto o archivo antes de completarse. La regla definitiva se validará en la SPEC de Tareas.</Hint>
-        </Box>
       </Stack>
     </EpicoDialog>
   );
