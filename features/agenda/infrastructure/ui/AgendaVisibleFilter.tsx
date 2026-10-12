@@ -1,7 +1,6 @@
 "use client";
-import { Autocomplete, InputAdornment, Paper, Stack, TextField } from "@mui/material";
+import { Autocomplete, Paper, Stack, TextField } from "@mui/material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
-import SearchIcon from "@mui/icons-material/Search";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { OwnerId } from "@/features/agenda/domain/agenda.types";
 
@@ -41,14 +40,6 @@ export const AgendaVisibleFilter = () => {
             />
           )}
           noOptionsText="Sin coincidencias"
-        />
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Buscar visita, cliente, actividad..."
-          value={a.search}
-          onChange={(e) => a.setSearch(e.target.value)}
-          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
         />
       </Stack>
     </Paper>
