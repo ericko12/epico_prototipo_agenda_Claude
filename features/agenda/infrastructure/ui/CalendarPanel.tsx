@@ -113,6 +113,31 @@ const CurrentTimeLine = ({ date, left = LABEL_W }: { date: Date; left?: number }
   );
 };
 
+const TimeSlotHover = ({ top, left = LABEL_W }: { top: number; left?: number }) => (
+  <Box
+    sx={{
+      position: "absolute",
+      left,
+      right: 4,
+      top,
+      height: 30,
+      bgcolor: "rgba(27,56,146,.06)",
+      border: "1px solid rgba(27,56,146,.28)",
+      borderRadius: "4px",
+      pointerEvents: "none",
+      zIndex: 1,
+      display: "flex",
+      alignItems: "center",
+      px: 1,
+      transition: "background-color .12s ease, border-color .12s ease",
+    }}
+  >
+    <Typography fontSize={FontSizesEnum.Omega} color={ColorsEpico.ColorSecondary} fontWeight={FontWeightEnum.Medium}>
+      {hhmm(DAY_START + top)}–{hhmm(DAY_START + top + 30)} · Clic para crear
+    </Typography>
+  </Box>
+);
+
 const TimeLines = ({ left = LABEL_W }: { left?: number }) => (
   <>
     {Array.from({ length: DAY_HOURS * 2 + 1 }, (_, i) => {
@@ -210,6 +235,7 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
   const a = useAgenda();
   const ref = useRef<HTMLDivElement>(null);
   const [dropHint, setDropHint] = useState<number | null>(null);
+  const [hoverHint, setHoverHint] = useState<number | null>(null);
   const selectedIso = isoDate(selectedDate);
   const evs = a.events.filter((e) => e.status !== "Cancelada" && eventDate(e) === selectedIso);
 
@@ -230,7 +256,6 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
         e.dataTransfer.dropEffect = moving ? "move" : "copy";
         setDropHint(minuteFromY(e.clientY));
       }}
-      onDragLeave={() => setDropHint(null)}
       onDrop={(e) => {
         setDropHint(null);
         if (!a.canEdit) return;
@@ -252,15 +277,26 @@ const DayView = ({ selectedDate }: { selectedDate: Date }) => {
           /* sin datos */
         }
       }}
+      onMouseMove={(e) => {
+        if (!a.canEdit || dropHint != null) return;
+        setHoverHint(minuteFromY(e.clientY));
+      }}
+      onMouseLeave={() => {
+        setHoverHint(null);
+        setDropHint(null);
+      }}
       onClick={(e) => {
         if (!a.canEdit) return;
         const minute = minuteFromY(e.clientY);
-        a.setSelectedGridSlot({ date: selectedIso, time: hhmm(DAY_START + minute) });
+        const time = hhmm(DAY_START + minute);
+        a.setSelectedGridSlot({ date: selectedIso, time });
+        a.openForm({ date: selectedIso, time, creationMode: "event" });
       }}
-      sx={{ position: "relative", height: CALENDAR_HEIGHT, ml: 0, bgcolor: ColorsEpico.ColorWhite, cursor: a.canEdit ? "crosshair" : "default" }}
+      sx={{ position: "relative", height: CALENDAR_HEIGHT, ml: 0, bgcolor: ColorsEpico.ColorWhite, cursor: a.canEdit ? "pointer" : "default" }}
     >
       <TimeLines />
       <CurrentTimeLine date={selectedDate} />
+      {hoverHint != null && dropHint == null && <TimeSlotHover top={hoverHint} />}
       {a.selectedGridSlot?.date === selectedIso && a.selectedGridSlot.time && (
         <Box
           sx={{
@@ -327,6 +363,7 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
   const a = useAgenda();
   const bodyRef = useRef<HTMLDivElement>(null);
   const [dropHint, setDropHint] = useState<{ day: number; minute: number } | null>(null);
+  const [hoverHint, setHoverHint] = useState<{ day: number; minute: number } | null>(null);
   const start = startOfWeek(selectedDate);
   const days = Array.from({ length: 5 }, (_, i) => {
     const date = new Date(start);
@@ -374,7 +411,6 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
                   e.dataTransfer.dropEffect = "move";
                   setDropHint({ day: dayIndex, minute: minuteFromY(e.clientY) });
                 }}
-                onDragLeave={() => setDropHint((x) => x?.day === dayIndex ? null : x)}
                 onDrop={(e) => {
                   if (!a.canEdit) return;
                   const movingId = e.dataTransfer.getData("application/x-agenda-event");
@@ -384,9 +420,19 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
                   if (moving) a.rescheduleEvent(moving, dateIso, hhmm(DAY_START + minuteFromY(e.clientY)));
                   setDropHint(null);
                 }}
+                onMouseMove={(e) => {
+                  if (!a.canEdit || dropHint != null) return;
+                  setHoverHint({ day: dayIndex, minute: minuteFromY(e.clientY) });
+                }}
+                onMouseLeave={() => {
+                  setHoverHint((x) => x?.day === dayIndex ? null : x);
+                  setDropHint((x) => x?.day === dayIndex ? null : x);
+                }}
                 onClick={(e) => {
                   if (!a.canEdit) return;
-                  a.setSelectedGridSlot({ date: dateIso, time: hhmm(DAY_START + minuteFromY(e.clientY)) });
+                  const time = hhmm(DAY_START + minuteFromY(e.clientY));
+                  a.setSelectedGridSlot({ date: dateIso, time });
+                  a.openForm({ date: dateIso, time, creationMode: "event" });
                 }}
                 sx={{
                   position: "relative",
@@ -397,6 +443,7 @@ const WeekView = ({ selectedDate }: { selectedDate: Date }) => {
               >
                 <TimeLines left={0} />
                 <CurrentTimeLine date={d} left={0} />
+                {hoverHint?.day === dayIndex && dropHint == null && <TimeSlotHover top={hoverHint.minute} left={4} />}
                 {a.selectedGridSlot?.date === dateIso && a.selectedGridSlot.time && (
                   <Box
                     sx={{
