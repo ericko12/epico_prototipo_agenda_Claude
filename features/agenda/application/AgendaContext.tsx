@@ -1,17 +1,16 @@
 "use client";
-// Estado y reglas del módulo Agenda. Lógica portada del Simulador V8.2 (mismas reglas de rol,
-// alcance, traslapes, ruta sugerida, desviaciones, visitas abiertas y cierre automático).
+// Estado y reglas del módulo Agenda. Lógica portada del Simulador V8.2 para calendario,
+// roles/alcance, traslapes, visitas abiertas y cierre automático.
 // En Épico esto viviría en Redux Toolkit (features/agenda/application/redux); aquí es un Context
 // para que la versión sintética no dependa del store real.
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import {
-  AgendaEvent, AgendaTask, Client, DetailVisibility, OwnerId, OwnerProfile, Role, Scope, SummaryFilter, View,
+  AgendaEvent, Client, DetailVisibility, OwnerId, OwnerProfile, Role, Scope, SummaryFilter, View,
 } from "@/features/agenda/domain/agenda.types";
-import { clientKey, endMin, hhmm, initialProfiles, mins, nowMx, ROLE_EXPLANATION } from "@/features/agenda/domain/agenda.data";
+import { endMin, hhmm, initialProfiles, mins, nowMx, ROLE_EXPLANATION } from "@/features/agenda/domain/agenda.data";
 
-export interface RouteStop { c: Client; hh: string; travel: number }
-export type CreateActivityKind = "event" | "unplanned" | "task";
-export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; date?: string; time?: string; startAfterCreate: boolean; creationMode: Exclude<CreateActivityKind, "task">; seed: number }
+export type CreateActivityKind = "event" | "unplanned";
+export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; date?: string; time?: string; startAfterCreate: boolean; creationMode: CreateActivityKind; seed: number }
 export interface DetailState { event: AgendaEvent | null; visitNowCreated?: boolean }
 type Snack = { msg: string; severity: "success" | "warning" | "error" | "info" } | null;
 
@@ -37,21 +36,16 @@ function useAgendaState() {
   const [summaryFilter, setSummaryFilterRaw] = useState<SummaryFilter>(null);
   const [portfolioScope, setPortfolioScope] = useState<"own" | "team">("team");
   const [search, setSearch] = useState("");
-  const [routeSel, setRouteSel] = useState<string[]>([]);
-  const [routePlan, setRoutePlan] = useState<RouteStop[] | null>(null);
-  const [routeMsg, setRouteMsg] = useState("");
   const [scenarioMsg, setScenarioMsg] = useState("");
   const [closeResult, setCloseResult] = useState<{ type: "info" | "ok"; text: string } | null>(null);
   const [form, setForm] = useState<FormState>({ open: false, editingId: null, title: "Nuevo evento", startAfterCreate: false, creationMode: "event", seed: 0 });
   const [detail, setDetail] = useState<DetailState>({ event: null });
-  const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<AgendaEvent | null>(null);
   const [snack, setSnack] = useState<Snack>(null);
   const [showGaps, setShowGaps] = useState(false);
 
   const profile = profiles[owner];
   const events = profile.events;
-  const tasks = profile.tasks;
   const clients = profile.clients;
 
   // ---------- permisos ----------
@@ -65,19 +59,18 @@ function useAgendaState() {
     setProfiles((p) => ({ ...p, [who]: { ...p[who], events: fn(p[who].events) } }));
 
   // ---------- rol / alcance / agenda visible ----------
-  const resetRoute = () => { setRouteSel([]); setRoutePlan(null); setRouteMsg(""); };
-  const setOwner = (id: OwnerId) => { if (role === "advisor" && id !== "luis") return; setOwnerRaw(id); setSummaryFilterRaw(null); resetRoute(); };
+  const setOwner = (id: OwnerId) => { if (role === "advisor" && id !== "luis") return; setOwnerRaw(id); setSummaryFilterRaw(null); };
   const applyRoleRules = (r: Role, s: Scope) => {
     let ns = s;
     if (r === "advisor") ns = "own";
     else if (r === "manager" && s === "own") ns = "team";
     else if ((r === "support" || r === "consult") && s === "own") ns = "global";
     setScopeRaw(ns);
-    if (r === "advisor") { setPortfolioScope("own"); setOwnerRaw("luis"); resetRoute(); }
+    if (r === "advisor") { setPortfolioScope("own"); setOwnerRaw("luis"); }
     else if (((r === "manager" || r === "support") && ns !== "own") || r === "consult") setPortfolioScope("team");
   };
   const setRole = (r: Role) => { setRoleRaw(r); applyRoleRules(r, scope); };
-  const setScope = (s: Scope) => { setScopeRaw(s); resetRoute(); applyRoleRules(role, s); };
+  const setScope = (s: Scope) => { setScopeRaw(s); applyRoleRules(role, s); };
 
   // ---------- cartera ----------
   const teamClients = useMemo<Client[]>(() => (Object.entries(profiles) as [OwnerId, OwnerProfile][])
@@ -87,9 +80,7 @@ function useAgendaState() {
     if (portfolioScope === "team" || scope === "global") return portfolioScope === "team" ? teamClients : [...clients, ...teamClients];
     return clients;
   }, [role, portfolioScope, scope, clients, teamClients]);
-  const toggleRouteSel = (key: string) => setRouteSel((s) => (s.includes(key) ? s.filter((k) => k !== key) : [...s, key]));
 
-  // ---------- ruta sugerida (primer destino = punto de partida) ----------
   const todayIso = () => {
     const now = new Date();
     const y = now.getFullYear();
@@ -103,161 +94,7 @@ function useAgendaState() {
     return now.getHours() * 60 + now.getMinutes();
   };
 
-  const routeBusyVisits = () =>
-    events
-      .filter((e) =>
-        e.status !== "Cancelada" &&
-        !e.absence &&
-        e.activityType === "visit" &&
-        e.kind === "planned" &&
-        (e.date ?? "2026-09-22") === selectedDate
-      )
-      .map((e) => ({ start: mins(e.time), end: mins(e.time) + e.duration }))
-      .sort((a, b) => a.start - b.start);
-
-  const findAvailableStart = (from: number, duration: number, busy: { start: number; end: number }[]) => {
-    let candidate = from;
-    const dayEnd = 8 * 60 + 13 * 60;
-
-    while (candidate + duration <= dayEnd) {
-      const conflict = busy.find((b) => candidate < b.end && b.start < candidate + duration);
-      if (!conflict) return candidate;
-      candidate = Math.max(candidate, conflict.end);
-    }
-    return null;
-  };
-
-  const formatRoute = (order: Client[]): RouteStop[] | null => {
-    const today = todayIso();
-    if (selectedDate < today) {
-      setRouteMsg("La ruta sugerida sólo puede generarse para hoy en horarios futuros o para días posteriores.");
-      return null;
-    }
-
-    let cursor = selectedDate === today ? Math.max(8 * 60, currentMinute()) : 8 * 60;
-    const busy = routeBusyVisits();
-    const plannedBusy = busy.slice();
-    const result: RouteStop[] = [];
-
-    for (let i = 0; i < order.length; i++) {
-      const c = order[i];
-      const travel = i === 0 ? 0 : Math.max(10, Math.round(Math.hypot(c[2] - order[i - 1][2], c[3] - order[i - 1][3]) * 10));
-      const earliest = cursor + travel;
-      const start = findAvailableStart(earliest, 30, plannedBusy);
-
-      if (start == null) {
-        setRouteMsg("No hay suficiente disponibilidad futura en el día seleccionado para acomodar toda la ruta.");
-        return null;
-      }
-
-      result.push({ c, hh: hhmm(start), travel });
-      plannedBusy.push({ start, end: start + 30 });
-      plannedBusy.sort((a, b) => a.start - b.start);
-      cursor = start + 30;
-    }
-
-    setRouteMsg("");
-    return result;
-  };
-
-  const routeOrder = (selected: Client[]) => {
-    if (!selected.length) return [];
-    const firstKey = routeSel[0];
-    let firstIndex = selected.findIndex((c) => clientKey(c) === firstKey);
-    if (firstIndex < 0) firstIndex = 0;
-
-    const pool = selected.slice();
-    const first = pool.splice(firstIndex, 1)[0];
-    const order: Client[] = [first];
-    let cur = [first[2], first[3]];
-
-    while (pool.length) {
-      pool.sort((a, b) => Math.hypot(a[2] - cur[0], a[3] - cur[1]) - Math.hypot(b[2] - cur[0], b[3] - cur[1]));
-      const next = pool.shift()!;
-      order.push(next);
-      cur = [next[2], next[3]];
-    }
-    return order;
-  };
-
-  const suggestRoute = () => {
-    if (!canEdit) return;
-    const selected = [...clients, ...teamClients].filter((c, i, arr) => routeSel.includes(clientKey(c)) && arr.findIndex((x) => clientKey(x) === clientKey(c)) === i);
-    if (selected.length < 2) {
-      setRoutePlan(null);
-      setRouteMsg("Selecciona al menos 2 clientes para sugerir una ruta.");
-      return;
-    }
-    const plan = formatRoute(routeOrder(selected));
-    setRoutePlan(plan);
-  };
-
-  const cancelRouteSuggestion = () => {
-    setRoutePlan(null);
-    setRouteMsg("");
-  };
-
-  const moveStop = (i: number, d: number) => {
-    if (!routePlan) return;
-    const j = i + d;
-    if (j < 0 || j >= routePlan.length) return;
-    const arr = routePlan.map((x) => x.c);
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-    setRoutePlan(formatRoute(arr));
-  };
-
-  const removeStop = (i: number) => {
-    if (!routePlan) return;
-    const removed = routePlan[i];
-    if (!removed) return;
-
-    const remaining = routePlan.filter((_, index) => index !== i).map((x) => x.c);
-    setRouteSel((selected) => selected.filter((key) => key !== clientKey(removed.c)));
-
-    if (remaining.length < 2) {
-      setRoutePlan(null);
-      setRouteMsg("Se requieren al menos 2 destinos para sugerir una ruta.");
-      return;
-    }
-
-    setRoutePlan(formatRoute(remaining));
-  };
-
-  const applyRoute = () => {
-    if (!routePlan) return;
-    const proposed: AgendaEvent[] = routePlan.map((x, i) => ({
-      id: `route-${Date.now()}-${i}`,
-      title: x.c[0],
-      address: x.c[1],
-      time: x.hh,
-      duration: 30,
-      kind: "planned",
-      status: "Programada",
-      routeSuggested: true,
-      activityType: "visit",
-      date: selectedDate,
-    }));
-    const invalid = proposed.find((e, i) =>
-      events.some((x) =>
-        x.kind === "planned" &&
-        !x.absence &&
-        x.status !== "Cancelada" &&
-        x.activityType !== "internal" &&
-        (x.date ?? "2026-09-22") === e.date &&
-        overlaps(e, x)
-      )
-      || proposed.slice(0, i).some((x) => x.date === e.date && overlaps(e, x))
-    );
-    if (invalid) {
-      setSnack({ severity: "error", msg: `La ruta no se guardó. Existe un traslape con ${invalid.title} a las ${invalid.time}. Corrige la propuesta completa.` });
-      return;
-    }
-    updateEvents((evs) => [...evs, ...proposed]);
-    setSnack({ severity: "success", msg: `Se agregaron ${proposed.length} visitas de la ruta a la Agenda.` });
-    resetRoute();
-  };
-
-  // ---------- resumen / desviaciones ----------
+  // ---------- resumen ----------
   const matches = useCallback((e: AgendaEvent, f: SummaryFilter) => {
     if (f === "planned") return e.kind === "planned" && !e.absence;
     if (f === "done") return e.kind === "realized" && e.status === "Check-out realizado";
@@ -273,11 +110,6 @@ function useAgendaState() {
     late: activeEvents.filter((e) => matches(e, "late")).length,
   };
   const setSummaryFilter = (f: SummaryFilter) => setSummaryFilterRaw((cur) => (cur === f ? null : f));
-  const deviations = events.filter((e) => e.kind === "realized" && e.planned).map((e) => {
-    const d = timeDiff(e.planned!, e.time);
-    return { e, text: d === 0 ? "En horario" : d > 0 ? `+${d} min tarde` : `${Math.abs(d)} min antes` };
-  });
-
   const resolveNewVisitDrop = (date: string, time: string): { time: string; adjusted: boolean } | null => {
     const today = todayIso();
     if (date < today) {
@@ -319,7 +151,7 @@ function useAgendaState() {
       seed: Date.now(),
     });
   };
-  const setFormCreationMode = (creationMode: Exclude<CreateActivityKind, "task">) =>
+  const setFormCreationMode = (creationMode: CreateActivityKind) =>
     setForm((current) => ({
       ...current,
       creationMode,
@@ -452,12 +284,6 @@ function useAgendaState() {
     return null;
   };
 
-  // ---------- tareas ----------
-  const addTask = (t: Omit<AgendaTask, "id" | "status">) => {
-    setProfiles((p) => ({ ...p, [owner]: { ...p[owner], tasks: [...p[owner].tasks, { ...t, id: Date.now(), status: "Pendiente" }] } }));
-    setTaskFormOpen(false);
-  };
-
   // ---------- visitas abiertas / soporte ----------
   const loadOpenVisitScenario = () => {
     const planned = events.find((e) => e.kind === "planned" && !e.absence) || events[0];
@@ -476,11 +302,11 @@ function useAgendaState() {
   };
 
   return {
-    profiles, owner, setOwner, profile, events, tasks, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
-    view, setView, selectedDate, setSelectedDate, selectedGridSlot, setSelectedGridSlot, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
-    canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, resolveNewVisitDrop,
-    routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, removeStop, applyRoute, form, openForm, setFormCreationMode, openEdit, closeForm, saveEvent, detail, setDetail,
-    cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
+    profiles, owner, setOwner, profile, events, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
+    view, setView, selectedDate, setSelectedDate, selectedGridSlot, setSelectedGridSlot, summaryFilter, setSummaryFilter, matches, summary, portfolioScope, setPortfolioScope, search, setSearch,
+    canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, resolveNewVisitDrop,
+    form, openForm, setFormCreationMode, openEdit, closeForm, saveEvent, detail, setDetail,
+    cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut,
     scenarioMsg, loadOpenVisitScenario, openVisits, regularize, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
   };
 }
