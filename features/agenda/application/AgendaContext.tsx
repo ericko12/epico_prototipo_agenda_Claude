@@ -10,7 +10,8 @@ import {
 import { clientKey, endMin, hhmm, initialProfiles, mins, nowMx, ROLE_EXPLANATION } from "@/features/agenda/domain/agenda.data";
 
 export interface RouteStop { c: Client; hh: string; travel: number }
-export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; date?: string; time?: string; startAfterCreate: boolean; seed: number }
+export type CreateActivityKind = "event" | "unplanned" | "task";
+export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; date?: string; time?: string; startAfterCreate: boolean; creationMode: Exclude<CreateActivityKind, "task">; seed: number }
 export interface DetailState { event: AgendaEvent | null; visitNowCreated?: boolean }
 type Snack = { msg: string; severity: "success" | "warning" | "error" | "info" } | null;
 
@@ -41,7 +42,7 @@ function useAgendaState() {
   const [routeMsg, setRouteMsg] = useState("");
   const [scenarioMsg, setScenarioMsg] = useState("");
   const [closeResult, setCloseResult] = useState<{ type: "info" | "ok"; text: string } | null>(null);
-  const [form, setForm] = useState<FormState>({ open: false, editingId: null, title: "Nuevo evento", startAfterCreate: false, seed: 0 });
+  const [form, setForm] = useState<FormState>({ open: false, editingId: null, title: "Nuevo evento", startAfterCreate: false, creationMode: "event", seed: 0 });
   const [detail, setDetail] = useState<DetailState>({ event: null });
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<AgendaEvent | null>(null);
@@ -302,11 +303,30 @@ function useAgendaState() {
   };
 
   // ---------- eventos: alta / edición / cancelación ----------
-  const openForm = (opts: Partial<Pick<FormState, "client" | "address" | "date" | "time" | "startAfterCreate" | "title">> = {}) => {
+  const openForm = (opts: Partial<Pick<FormState, "client" | "address" | "date" | "time" | "startAfterCreate" | "title" | "creationMode">> = {}) => {
     if (!canEdit) return;
-    setForm({ open: true, editingId: null, title: opts.title ?? "Nuevo evento", client: opts.client, address: opts.address, date: opts.date, time: opts.time, startAfterCreate: !!opts.startAfterCreate, seed: Date.now() });
+    const creationMode = opts.creationMode ?? (opts.startAfterCreate ? "unplanned" : "event");
+    setForm({
+      open: true,
+      editingId: null,
+      title: opts.title ?? (creationMode === "unplanned" ? "Crear visita no planeada" : "Nuevo evento"),
+      client: opts.client,
+      address: opts.address,
+      date: opts.date,
+      time: opts.time,
+      startAfterCreate: creationMode === "unplanned" || !!opts.startAfterCreate,
+      creationMode,
+      seed: Date.now(),
+    });
   };
-  const openEdit = (e: AgendaEvent) => { setDetail({ event: null }); setForm({ open: true, editingId: e.id, title: "Editar / reprogramar visita", client: e.title, address: e.address, date: e.date, time: e.time, startAfterCreate: false, seed: Date.now() }); };
+  const setFormCreationMode = (creationMode: Exclude<CreateActivityKind, "task">) =>
+    setForm((current) => ({
+      ...current,
+      creationMode,
+      startAfterCreate: creationMode === "unplanned",
+      title: creationMode === "unplanned" ? "Crear visita no planeada" : "Nuevo evento",
+    }));
+  const openEdit = (e: AgendaEvent) => { setDetail({ event: null }); setForm({ open: true, editingId: e.id, title: "Editar / reprogramar visita", client: e.title, address: e.address, date: e.date, time: e.time, startAfterCreate: false, creationMode: "event", seed: Date.now() }); };
   const closeForm = () => setForm((f) => ({ ...f, open: false, editingId: null }));
   /** Devuelve un mensaje de error o null si se guardó. */
   const saveEvent = (v: { type: AgendaEvent["activityType"]; client: string; address: string; date: string; time: string; duration: number; quote: string; description: string }): string | null => {
@@ -459,7 +479,7 @@ function useAgendaState() {
     profiles, owner, setOwner, profile, events, tasks, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
     view, setView, selectedDate, setSelectedDate, selectedGridSlot, setSelectedGridSlot, summaryFilter, setSummaryFilter, matches, summary, deviations, portfolioScope, setPortfolioScope, search, setSearch,
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, routeSel, toggleRouteSel, resolveNewVisitDrop,
-    routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, removeStop, applyRoute, form, openForm, openEdit, closeForm, saveEvent, detail, setDetail,
+    routePlan, routeMsg, suggestRoute, cancelRouteSuggestion, moveStop, removeStop, applyRoute, form, openForm, setFormCreationMode, openEdit, closeForm, saveEvent, detail, setDetail,
     cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut, taskFormOpen, setTaskFormOpen, addTask,
     scenarioMsg, loadOpenVisitScenario, openVisits, regularize, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
   };

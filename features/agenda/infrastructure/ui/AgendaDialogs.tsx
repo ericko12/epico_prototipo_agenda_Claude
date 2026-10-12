@@ -47,6 +47,23 @@ const activityTypeLabel = (type?: ActivityType) =>
   type === "internal" ? "Otra actividad" :
   "Visita a cliente";
 
+type CreationSelectorValue = "event" | "unplanned" | "task";
+const CreationTypeSelector = ({ value, onChange }: { value: CreationSelectorValue; onChange: (value: CreationSelectorValue) => void }) => (
+  <TextField
+    select
+    fullWidth
+    required
+    size="small"
+    label="Tipo de actividad"
+    value={value}
+    onChange={(e) => onChange(e.target.value as CreationSelectorValue)}
+  >
+    <MenuItem value="event">Evento</MenuItem>
+    <MenuItem value="unplanned">Visita no planeada</MenuItem>
+    <MenuItem value="task">Tarea</MenuItem>
+  </TextField>
+);
+
 const EpicoDialog = ({ open, title, onClose, children, actions, maxWidth = "sm" }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode; actions: React.ReactNode; maxWidth?: "xs" | "sm" | "md" }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
@@ -234,19 +251,33 @@ export const EventFormDialog = () => {
   const addresses = Array.from(new Set(a.visiblePortfolio.filter((x) => x[0] === v.client).map((x) => x[1])));
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((p) => ({ ...p, [k]: e.target.value }));
   const save = () => setError(a.saveEvent({ ...v, duration: Number(v.duration) }));
+  const creationMode: CreationSelectorValue = f.creationMode ?? (f.startAfterCreate ? "unplanned" : "event");
+  const changeCreationMode = (next: CreationSelectorValue) => {
+    setError(null);
+    if (next === "task") {
+      a.closeForm();
+      a.setTaskFormOpen(true);
+      return;
+    }
+    a.setFormCreationMode(next);
+    if (next === "unplanned") setV((current) => ({ ...current, type: "visit" }));
+  };
 
   return (
-    <EpicoDialog open={f.open} title={f.title} onClose={a.closeForm}
+    <EpicoDialog open={f.open} title={f.editingId != null ? f.title : "Crear actividad"} onClose={a.closeForm}
       actions={<><Button variant="outlined" onClick={a.closeForm} sx={closeBtnSx}>Cancelar</Button><Button variant="contained" onClick={save} sx={saveBtnSx}>Guardar actividad</Button></>}>
       <Stack spacing={2}>
-        <Box>
-          <TextField select fullWidth size="small" label="Tipo" value={v.type} onChange={set("type")}>
-            <MenuItem value="visit">Visita a cliente</MenuItem>
-            <MenuItem value="promo">Entrega de material promocional</MenuItem>
-            <MenuItem value="internal">Otra actividad</MenuItem>
-          </TextField>
-          {v.type === "promo" && <Hint sx={{ mt: 0.5 }}>Este tipo requiere evidencia al completarse. La evidencia se adjunta en la ejecución/resultado, no en la planeación.</Hint>}
-        </Box>
+        {f.editingId == null && <CreationTypeSelector value={creationMode} onChange={changeCreationMode} />}
+        {creationMode !== "unplanned" && (
+          <Box>
+            <TextField select fullWidth size="small" label="Tipo de evento" value={v.type} onChange={set("type")}>
+              <MenuItem value="visit">Visita a cliente</MenuItem>
+              <MenuItem value="promo">Entrega de material promocional</MenuItem>
+              <MenuItem value="internal">Otra actividad</MenuItem>
+            </TextField>
+            {v.type === "promo" && <Hint sx={{ mt: 0.5 }}>Este tipo requiere evidencia al completarse. La evidencia se adjunta en la ejecución/resultado, no en la planeación.</Hint>}
+          </Box>
+        )}
         {v.type === "visit" && (
           <Box>
             <Autocomplete
@@ -329,10 +360,21 @@ export const TaskFormDialog = () => {
   }, [a.taskFormOpen]);
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((p) => ({ ...p, [k]: e.target.value }));
   const close = () => a.setTaskFormOpen(false);
+  const changeCreationMode = (next: CreationSelectorValue) => {
+    if (next === "task") return;
+    close();
+    a.openForm({
+      ...(a.selectedGridSlot ? { date: a.selectedGridSlot.date, time: a.selectedGridSlot.time } : {}),
+      creationMode: next,
+      startAfterCreate: next === "unplanned",
+      title: next === "unplanned" ? "Crear visita no planeada" : "Nuevo evento",
+    });
+  };
   return (
-    <EpicoDialog open={a.taskFormOpen} title="Nueva tarea" onClose={close}
+    <EpicoDialog open={a.taskFormOpen} title="Crear actividad" onClose={close}
       actions={<><Button variant="outlined" onClick={close} sx={closeBtnSx}>Cancelar</Button><Button variant="contained" disabled={!v.subject.trim()} onClick={() => a.addTask(v)} sx={saveBtnSx}>Crear tarea</Button></>}>
       <Stack spacing={2} sx={{ pt: 1 }}>
+        <CreationTypeSelector value="task" onChange={changeCreationMode} />
         <TextField fullWidth size="small" required label="Asunto" placeholder="Ej. Enviar cotización solicitada" value={v.subject} onChange={set("subject")} />
         <TextField fullWidth size="small" multiline minRows={3} label="Detalle / descripción" placeholder="Describe qué debe realizarse" value={v.detail} onChange={set("detail")} />
         <Stack direction="row" spacing={2}>
