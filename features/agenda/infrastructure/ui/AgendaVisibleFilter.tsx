@@ -15,8 +15,8 @@ export const AgendaVisibleFilter = () => {
     <Paper
       elevation={0}
       sx={{
-        mt: 1.5,
-        p: 1,
+        mt: 1,
+        p: 0.75,
         border: `1px solid ${ColorsEpico.ColorLightBlueishGray}`,
         borderRadius: "8px",
         bgcolor: ColorsEpico.ColorWhite,
