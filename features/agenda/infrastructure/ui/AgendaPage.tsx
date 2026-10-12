@@ -11,7 +11,7 @@ import { SummaryMetrics } from "./SummaryMetrics";
 import { AgendaVisibleFilter } from "./AgendaVisibleFilter";
 import { CalendarPanel } from "./CalendarPanel";
 import { SidePanel } from "./SidePanel";
-import { CancelEventDialog, EventDetailDialog, EventFormDialog, TaskFormDialog } from "./AgendaDialogs";
+import { CancelEventDialog, EventDetailDialog, EventFormDialog } from "./AgendaDialogs";
 
 const AgendaSnackbar = () => {
   const { snack, setSnack } = useAgenda();
@@ -45,7 +45,6 @@ const AgendaContent = () => {
       </Box>
       <EventDetailDialog />
       <EventFormDialog />
-      <TaskFormDialog />
       <CancelEventDialog />
       <AgendaSnackbar />
     </Box>
