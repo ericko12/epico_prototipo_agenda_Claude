@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, ButtonBase, Chip, IconButton, Popover, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Box, Button, ButtonBase, IconButton, Popover, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { CalendarMonthOutlined, ChevronLeft, ChevronRight, TodayOutlined } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
@@ -207,20 +207,6 @@ const EventCard = ({ e, compact = false }: { e: AgendaEvent; compact?: boolean }
         >
           {e.time} · {a.eventLabel(e)}
         </Typography>
-        {e.routeSuggested && !a.hideDetail && (
-          <Chip
-            label="RS"
-            size="small"
-            title="Ruta sugerida"
-            sx={{
-              height: 18,
-              flexShrink: 0,
-              fontSize: FontSizesEnum.Omega,
-              fontWeight: FontWeightEnum.Bold,
-              "& .MuiChip-label": { px: 0.75 },
-            }}
-          />
-        )}
       </Stack>
       {!compact && (
         <Typography noWrap sx={{ fontSize: FontSizesEnum.Omega, color: ColorsEpico.ColorBlack60, lineHeight: 1.15 }}>
