@@ -91,12 +91,18 @@ export const EventDetailDialog = () => {
   const [objective, setObjective] = useState("");
   const [result, setResult] = useState("");
   const [findings, setFindings] = useState("");
+  const [evidence, setEvidence] = useState<{name:string;size:number}[]>([]);
+  const [reviewing, setReviewing] = useState(false);
+  const [evidenceError, setEvidenceError] = useState("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   useEffect(() => {
     setObjective(e?.objective ?? "");
     setResult(e?.result ?? "");
     setFindings(e?.findings ?? "");
     setCheckoutError(null);
+    setEvidence([]);
+    setReviewing(false);
+    setEvidenceError("");
   }, [e?.id, e?.status]);
   if (!e) return null;
   const close = () => a.setDetail({ event: null });
@@ -112,7 +118,18 @@ export const EventDetailDialog = () => {
   const editable = a.canEditEvent(e);
   const canCheckIn = a.canExecuteVisit(e);
   const canCheckOut = a.role === "advisor" && e.status === "Check-in activo";
-  const doCheckOut = () => setCheckoutError(a.completeCheckOut(e, { objective, result, findings }));
+  const doCheckOut = () => {
+    if (!objective.trim() || !result.trim()) { setCheckoutError("Completa objetivo y resultado antes de finalizar."); setReviewing(false); return; }
+    if (e.requiresEvidence && evidence.length === 0) { setCheckoutError("Esta visita requiere evidencia. Adjunta un archivo antes de finalizar."); setReviewing(false); return; }
+    setCheckoutError(a.completeCheckOut(e, { objective, result, findings }));
+  };
+  const attachFiles = (files: FileList | null) => {
+    if (!files) return;
+    const accepted = ["image/jpeg","image/png","application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+    const valid = Array.from(files).filter(file => accepted.includes(file.type) && file.size <= (file.type.startsWith("image/") ? 10 : 20)*1024*1024);
+    setEvidence(prev => [...prev,...valid.map(file=>({name:file.name,size:file.size}))]);
+    setEvidenceError(valid.length===files.length?"":"Algunos archivos no se agregaron. Formatos propuestos: JPG, PNG, PDF, Word y Excel (imágenes hasta 10 MB, documentos hasta 20 MB).");
+  };
   return (
     <EpicoDialog
       open
@@ -124,7 +141,7 @@ export const EventDetailDialog = () => {
           <Button variant="outlined" onClick={close} sx={closeBtnSx}>Cancelar</Button>
           <Box>
             {canCheckIn && <Button variant="contained" onClick={() => a.startCheckIn(e)} sx={saveBtnSx}>Iniciar Check-in</Button>}
-            {canCheckOut && <Button variant="contained" onClick={doCheckOut} sx={saveBtnSx}>Realizar Check-out</Button>}
+            {canCheckOut && <Button variant="contained" onClick={() => { if (reviewing) doCheckOut(); else {setCheckoutError(null);setReviewing(true);} }} sx={saveBtnSx}>{reviewing ? "Confirmar Check-out" : "Revisar y finalizar"}</Button>}
           </Box>
         </Stack>
       }
@@ -198,6 +215,28 @@ export const EventDetailDialog = () => {
               value={findings}
               onChange={(x) => setFindings(x.target.value)}
             />
+            <Box sx={{p:1.5,border:"1px solid",borderColor:"divider",borderRadius:1}}>
+              <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta}>Evidencias de la visita {e.requiresEvidence ? "(requerida en este escenario)" : "(opcional en este escenario)"}</Typography>
+              <Typography fontSize={FontSizesEnum.Epsilon} color="text.secondary" sx={{my:1}}>Puedes agregarlas durante la visita. En este simulador se muestran los nombres, pero no se almacenan ni se envían.</Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                <Button component="label" variant="outlined" size="small">Tomar foto<input hidden type="file" accept="image/*" capture="environment" onChange={ev=>{attachFiles(ev.target.files);ev.target.value="";}} /></Button>
+                <Button component="label" variant="outlined" size="small">Galería<input hidden type="file" accept="image/jpeg,image/png" multiple onChange={ev=>{attachFiles(ev.target.files);ev.target.value="";}} /></Button>
+                <Button component="label" variant="outlined" size="small">Adjuntar archivo<input hidden type="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx" multiple onChange={ev=>{attachFiles(ev.target.files);ev.target.value="";}} /></Button>
+              </Stack>
+              {evidenceError && <Alert severity="warning" sx={{mt:1}}>{evidenceError}</Alert>}
+              {evidence.map((file,index)=><Stack key={index} direction="row" alignItems="center" justifyContent="space-between" sx={{mt:1,p:.7,bgcolor:"action.hover",borderRadius:1}}>
+                <Typography fontSize={FontSizesEnum.Epsilon} sx={{overflowWrap:"anywhere"}}>{file.name} · {(file.size/1024/1024).toFixed(2)} MB</Typography>
+                <Button size="small" color="error" onClick={()=>setEvidence(old=>old.filter((_,i)=>i!==index))}>Quitar</Button>
+              </Stack>)}
+            </Box>
+            {reviewing && <Alert severity="info" variant="outlined">
+              <b>Revisar y finalizar:</b> confirma los datos antes del Check-out.
+              <Box>Objetivo: {objective || "Sin capturar"}</Box>
+              <Box>Resultado: {result || "Sin capturar"}</Box>
+              <Box>Hallazgos: {findings || "Sin notas"}</Box>
+              <Box>Evidencias: {evidence.length} archivo(s) seleccionados.</Box>
+              <Button size="small" onClick={()=>setReviewing(false)}>Volver a editar</Button>
+            </Alert>}
             {checkoutError && <Alert severity="error" variant="outlined">{checkoutError}</Alert>}
           </Stack>
         </Box>
