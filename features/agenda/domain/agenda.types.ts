@@ -29,7 +29,6 @@ export interface AgendaEvent {
   modifiedBy?: string | null;
   modifiedAt?: string | null;
   cancelReason?: string;
-  regularizedBy?: string;
   routeSuggested?: boolean;
   checkInAt?: string;
   checkOutAt?: string;
