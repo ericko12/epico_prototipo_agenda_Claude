@@ -1,5 +1,5 @@
 "use client";
-import { Alert, Box, Button, InputAdornment, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { Box, InputAdornment, MenuItem, TextField, Typography } from "@mui/material";
 import { DragIndicator, Search } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
@@ -7,13 +7,6 @@ import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { clientId, clientKey, normalize } from "@/features/agenda/domain/agenda.data";
 import { GapMarker, Hint, SectionTitle } from "./shared";
-
-const outlinedBtn = {
-  borderRadius: "4px",
-  fontWeight: FontWeightEnum.Medium,
-  color: ColorsEpico.ColorDarkCharcoal,
-  borderColor: ColorsEpico.ColorGrayNeutral,
-};
 
 const Portfolio = () => {
   const a = useAgenda();
@@ -26,7 +19,7 @@ const Portfolio = () => {
         {list.length === 0 && (
           <Hint>
             {q.length > 0 && q.length < 3
-              ? "Escribe al menos 3 caracteres."
+              ? "Escribe al menos 3 caracteres para buscar."
               : "No se encontraron clientes con ese criterio."}
           </Hint>
         )}
@@ -81,7 +74,7 @@ export const SidePanel = () => {
         placeholder="Cliente ID, nombre fiscal o dirección"
         value={a.search}
         onChange={(e) => a.setSearch(e.target.value)}
-        helperText={a.search.trim().length > 0 && a.search.trim().length < 3 ? "Escribe al menos 3 caracteres." : " "}
+        helperText={a.search.trim().length > 0 && a.search.trim().length < 3 ? "Escribe al menos 3 caracteres para buscar." : " "}
         slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
         sx={{ mt: 1.5 }}
       />
@@ -103,7 +96,7 @@ export const SidePanel = () => {
       <Portfolio />
 
       <Hint sx={{ mt: 2 }}>
-        Los horarios se muestran como hora local del asesor en esta simulación. El manejo definitivo de zona horaria sigue pendiente de validación técnica.
+        Los horarios se muestran como hora local del asesor en esta simulación.
       </Hint>
 
       <Box sx={{ mt: 2, p: 1.5, border: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, borderRadius: "8px" }}>
@@ -112,26 +105,12 @@ export const SidePanel = () => {
           "Toda visita debe tener un evento de Agenda antes del Check-in. Si surge durante la jornada, primero se crea el evento y después se inicia la visita.",
           "No se permite un nuevo Check-in mientras exista una visita abierta.",
           "Si existe un Check-in abierto al intentar iniciar la siguiente visita, el asesor debe recibir la advertencia y cerrar primero la visita anterior.",
-          "Si la última visita del día queda abierta, el proceso diario de las 22:00 hora Ciudad de México la cierra automáticamente, registra 10 minutos de duración y la identifica como cierre automático.",
+          "Si una visita queda abierta hasta el día siguiente, el asesor puede cerrarla manualmente antes de las 10:00 a. m. de su zona local; si sigue abierta a esa hora, el sistema la cierra automáticamente. Ambos escenarios registran 10 minutos.",
         ].map((r) => (
           <Typography key={r} fontSize={FontSizesEnum.Epsilon} color={ColorsEpico.ColorBlack60} sx={{ mt: 0.75 }}>
             • {r}
           </Typography>
         ))}
-        <Button
-          fullWidth
-          variant="outlined"
-          color="error"
-          onClick={a.simulateDayClose}
-          sx={{ ...outlinedBtn, mt: 1.5 }}
-        >
-          Simular cierre automático · 22:00 CDMX
-        </Button>
-        {a.closeResult && (
-          a.closeResult.type === "ok"
-            ? <Alert severity="success" variant="outlined" sx={{ mt: 1, fontSize: FontSizesEnum.Epsilon }}><b>Visita regularizada.</b> {a.closeResult.text}</Alert>
-            : <Hint sx={{ mt: 1 }}>{a.closeResult.text}</Hint>
-        )}
       </Box>
     </Box>
   );
