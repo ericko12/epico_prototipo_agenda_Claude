@@ -1,6 +1,6 @@
 "use client";
 // Estado y reglas del módulo Agenda. Lógica portada del Simulador V8.2 para calendario,
-// roles/alcance, traslapes, visitas abiertas y cierre automático.
+// roles/alcance, traslapes, visitas abiertas y cierre automático de visita olvidada.
 // En Épico esto viviría en Redux Toolkit (features/agenda/application/redux); aquí es un Context
 // para que la versión sintética no dependa del store real.
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
@@ -162,6 +162,7 @@ function useAgendaState() {
   const closeForm = () => setForm((f) => ({ ...f, open: false, editingId: null }));
   /** Devuelve un mensaje de error o null si se guardó. */
   const saveEvent = (v: { type: AgendaEvent["activityType"]; client: string; address: string; date: string; time: string; duration: number; quote: string; description: string }): string | null => {
+    if (v.type === "visit" && (!v.client.trim() || !v.address.trim())) return "Selecciona un cliente y una dirección para continuar.";
     if (!Number.isFinite(v.duration) || v.duration <= 0) return "Captura una duración mayor que cero.";
     const today = todayIso();
     if (v.date < today || (v.date === today && mins(v.time) < currentMinute())) return "No puedes programar una visita en un horario pasado.";
@@ -184,7 +185,7 @@ function useAgendaState() {
     setCancelTarget(null); setDetail({ event: null });
     setSnack({ severity: "info", msg: `Evento cancelado: ${e.title} (${e.time}).` });
   };
-  const canEditEvent = (e: AgendaEvent) => canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre automático"].includes(e.status);
+  const canEditEvent = (e: AgendaEvent) => canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre tardío/manual", "Cierre automático"].includes(e.status);
 
   const rescheduleEvent = (e: AgendaEvent, date: string, time: string): boolean => {
     if (!canEditEvent(e)) {
@@ -289,16 +290,13 @@ function useAgendaState() {
     const planned = events.find((e) => e.kind === "planned" && !e.absence) || events[0];
     const open: AgendaEvent = { id: `scenario-open-${Date.now()}`, title: planned?.title || "Cliente DUMMY", address: planned?.address || "Dirección DUMMY", time: "16:20", duration: 30, kind: "realized", status: "Check-in activo", planned: planned?.time || "16:00", scenario: true };
     updateEvents((evs) => [...evs.filter((e) => !(e.scenario && e.status === "Check-in activo")), open]);
-    setScenarioMsg(`Escenario cargado: ${profile.label} tiene una visita con Check-in activo y sin Check-out.${role !== "support" ? " Cambia a Administrador de Agenda para probar la regularización." : ""}`);
+    setScenarioMsg(`Escenario cargado: ${profile.label} tiene una visita con Check-in activo y sin Check-out. Mientras permanezca abierta, bloquea un nuevo Check-in.`);
   };
-  const openVisits = (Object.entries(profiles) as [OwnerId, OwnerProfile][]).flatMap(([id, p]) => p.events.filter((e) => e.status === "Check-in activo").map((e) => ({ id, owner: p.label, event: e })));
-  const regularize = (who: OwnerId, eventId: AgendaEvent["id"]) => updateEvents((evs) => evs.map((e) => (e.id === eventId ? { ...e, status: "Cierre administrativo", duration: 10, regularizedBy: "Administrador de Agenda", modifiedBy: "Administrador de Agenda", modifiedAt: nowMx() } : e)), who);
   const simulateDayClose = () => {
-    if (role !== "support") { setCloseResult({ type: "info", text: "La regularización masiva se representa como capacidad de Administrador de Agenda." }); return; }
     const open = events.find((e) => e.kind === "realized" && e.status === "Check-in activo");
-    if (!open) { setCloseResult({ type: "info", text: "No hay una visita abierta que regularizar en este momento." }); return; }
-    updateEvents((evs) => evs.map((e) => (e.id === open.id ? { ...e, status: "Cierre automático", duration: 10, automaticClose: true, checkOutAt: "22:00" } : e)));
-    setCloseResult({ type: "ok", text: "Cierre automático confirmado por negocio: proceso diario 22:00 CDMX, duración registrada 10 minutos y trazabilidad diferenciada." });
+    if (!open) { setCloseResult({ type: "info", text: "No hay una visita abierta para simular el cierre automático." }); return; }
+    updateEvents((evs) => evs.map((e) => (e.id === open.id ? { ...e, status: "Cierre automático", duration: 10, automaticClose: true, checkOutAt: "10:00" } : e)));
+    setCloseResult({ type: "ok", text: "Simulación: la visita quedó abierta del día anterior y fue cerrada automáticamente a las 10:00 a. m. de la zona local del asesor, con duración excepcional de 10 minutos." });
   };
 
   return {
@@ -307,7 +305,7 @@ function useAgendaState() {
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, resolveNewVisitDrop,
     form, openForm, setFormCreationMode, openEdit, closeForm, saveEvent, detail, setDetail,
     cancelTarget, setCancelTarget, cancelEvent, canEditEvent, rescheduleEvent, canExecuteVisit, startCheckIn, completeCheckOut,
-    scenarioMsg, loadOpenVisitScenario, openVisits, regularize, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
+    scenarioMsg, loadOpenVisitScenario, closeResult, simulateDayClose, snack, setSnack, showGaps, setShowGaps,
   };
 }
 
