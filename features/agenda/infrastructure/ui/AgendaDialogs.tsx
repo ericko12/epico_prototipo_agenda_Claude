@@ -328,7 +328,7 @@ export const EventFormDialog = () => {
                 setClientQuery(value ?? "");
               }}
               filterOptions={(options) => options}
-              noOptionsText={clientQuery.trim().length < 3 ? "Escribe al menos 3 caracteres" : "No hay clientes visibles con ese criterio"}
+              noOptionsText={clientQuery.trim().length < 3 ? "Escribe al menos 3 caracteres para buscar." : "No encontramos clientes o direcciones dentro de tu alcance con ese criterio."}
               getOptionLabel={(option) => option}
               renderOption={(props, option) => {
                 const sample = a.visiblePortfolio.find((x) => x[0] === option);
