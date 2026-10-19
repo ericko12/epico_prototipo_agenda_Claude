@@ -46,21 +46,12 @@ export const SimulationControls = () => {
         <Hint sx={{ mt: 1.2 }}>{a.roleExplanation}</Hint>
         {a.scenarioMsg && <Hint sx={{ mt: 0.5, color: ColorsEpico.ColorPurple }}>{a.scenarioMsg}</Hint>}
       </Box>
-      {a.role === "support" && (
-        <Alert severity="error" variant="outlined" sx={{ mt: 1.5, bgcolor: ColorsEpico.ColorPastelPink, "& .MuiAlert-message": { width: "100%" } }}>
-          <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta}>Control operativo de Agenda</Typography>
-          <Hint>Vista simulada para soporte: permite localizar visitas abiertas y regularizarlas conservando trazabilidad.</Hint>
-          {a.openVisits.length === 0 ? <Typography fontSize={FontSizesEnum.Epsilon} sx={{ mt: 1 }}>No hay visitas abiertas.</Typography> : a.openVisits.map((x) => (
-            <Stack key={`${x.id}-${x.event.id}`} direction="row" alignItems="center" justifyContent="space-between" gap={1} sx={{ py: 1, borderBottom: `1px solid ${ColorsEpico.ColorPink}`, "&:last-of-type": { borderBottom: 0 } }}>
-              <Box>
-                <Typography fontSize={FontSizesEnum.Epsilon} fontWeight={FontWeightEnum.Bold}>{x.owner} · {x.event.title}</Typography>
-                <Typography fontSize={FontSizesEnum.Epsilon}>Check-in {x.event.time} · sin Check-out</Typography>
-              </Box>
-              <Button size="small" variant="outlined" onClick={() => a.regularize(x.id, x.event.id)} sx={{ borderRadius: "4px", color: ColorsEpico.ColorDarkCharcoal, borderColor: ColorsEpico.ColorGrayNeutral, whiteSpace: "nowrap" }}>Regularizar cierre</Button>
-            </Stack>
-          ))}
-        </Alert>
-      )}
+      <Alert severity="info" variant="outlined" sx={{ mt: 1.5, "& .MuiAlert-message": { width: "100%" } }}>
+        <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta}>Prueba de cierre de visita olvidada</Typography>
+        <Hint>Control exclusivo del prototipo. Simula el proceso de las 10:00 a. m. del día siguiente en la zona local del asesor; no representa una acción disponible para Soporte en producción.</Hint>
+        <Button size="small" variant="outlined" onClick={a.simulateDayClose} sx={{ mt: 1, borderRadius: "4px" }}>Simular cierre automático · 10:00 día siguiente</Button>
+        {a.closeResult && <Hint sx={{ mt: 1 }}>{a.closeResult.text}</Hint>}
+      </Alert>
     </GapMarker>
   );
 };
