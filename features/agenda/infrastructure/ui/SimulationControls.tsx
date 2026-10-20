@@ -48,8 +48,8 @@ export const SimulationControls = () => {
       </Box>
       <Alert severity="info" variant="outlined" sx={{ mt: 1.5, "& .MuiAlert-message": { width: "100%" } }}>
         <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta}>Prueba de cierre de visita olvidada</Typography>
-        <Hint>Control exclusivo del prototipo. Simula el proceso de las 10:00 a. m. del día siguiente en la zona local del asesor; no representa una acción disponible para Soporte en producción.</Hint>
-        <Button size="small" variant="outlined" onClick={a.simulateDayClose} sx={{ mt: 1, borderRadius: "4px" }}>Simular cierre automático · 10:00 día siguiente</Button>
+        <Hint>Control exclusivo del prototipo. Simula el proceso diario de las 22:00, hora de Ciudad de México, para una visita que permanece con Check-in abierto. Este control no representa una acción disponible para Soporte en producción.</Hint>
+        <Button size="small" variant="outlined" onClick={a.simulateDayClose} sx={{ mt: 1, borderRadius: "4px" }}>Simular cierre automático · 22:00 CDMX</Button>
         {a.closeResult && <Hint sx={{ mt: 1 }}>{a.closeResult.text}</Hint>}
       </Alert>
     </GapMarker>
