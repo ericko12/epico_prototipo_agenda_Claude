@@ -185,7 +185,7 @@ function useAgendaState() {
     setCancelTarget(null); setDetail({ event: null });
     setSnack({ severity: "info", msg: `Evento cancelado: ${e.title} (${e.time}).` });
   };
-  const canEditEvent = (e: AgendaEvent) => canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre tardío/manual", "Cierre automático"].includes(e.status);
+  const canEditEvent = (e: AgendaEvent) => canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre automático"].includes(e.status);
 
   const rescheduleEvent = (e: AgendaEvent, date: string, time: string): boolean => {
     if (!canEditEvent(e)) {
@@ -295,8 +295,8 @@ function useAgendaState() {
   const simulateDayClose = () => {
     const open = events.find((e) => e.kind === "realized" && e.status === "Check-in activo");
     if (!open) { setCloseResult({ type: "info", text: "No hay una visita abierta para simular el cierre automático." }); return; }
-    updateEvents((evs) => evs.map((e) => (e.id === open.id ? { ...e, status: "Cierre automático", duration: 10, automaticClose: true, checkOutAt: "10:00" } : e)));
-    setCloseResult({ type: "ok", text: "Simulación: la visita quedó abierta del día anterior y fue cerrada automáticamente a las 10:00 a. m. de la zona local del asesor, con duración excepcional de 10 minutos." });
+    updateEvents((evs) => evs.map((e) => (e.id === open.id ? { ...e, status: "Cierre automático", duration: 10, automaticClose: true, checkOutAt: "22:00" } : e)));
+    setCloseResult({ type: "ok", text: "Simulación: la visita permaneció abierta y fue cerrada automáticamente a las 22:00, hora de Ciudad de México, con duración excepcional de 10 minutos." });
   };
 
   return {
