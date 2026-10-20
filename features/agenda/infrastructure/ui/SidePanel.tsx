@@ -105,7 +105,7 @@ export const SidePanel = () => {
           "Toda visita debe tener un evento de Agenda antes del Check-in. Si surge durante la jornada, primero se crea el evento y después se inicia la visita.",
           "No se permite un nuevo Check-in mientras exista una visita abierta.",
           "Si existe un Check-in abierto al intentar iniciar la siguiente visita, el asesor debe recibir la advertencia y cerrar primero la visita anterior.",
-          "Si una visita queda abierta hasta el día siguiente, el asesor puede cerrarla manualmente antes de las 10:00 a. m. de su zona local; si sigue abierta a esa hora, el sistema la cierra automáticamente. Ambos escenarios registran 10 minutos.",
+          "Si la última visita del día permanece abierta, el asesor puede realizar Check-out manual antes del corte con su duración real. Si sigue abierta a las 22:00, hora de Ciudad de México, el sistema la cierra automáticamente y registra una duración excepcional de 10 minutos.",
         ].map((r) => (
           <Typography key={r} fontSize={FontSizesEnum.Epsilon} color={ColorsEpico.ColorBlack60} sx={{ mt: 0.75 }}>
             • {r}
