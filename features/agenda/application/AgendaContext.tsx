@@ -8,6 +8,7 @@ import {
   AgendaEvent, Client, DetailVisibility, OwnerId, OwnerProfile, Role, Scope, SummaryFilter, View,
 } from "@/features/agenda/domain/agenda.types";
 import { endMin, hhmm, initialProfiles, mins, nowMx, ROLE_EXPLANATION } from "@/features/agenda/domain/agenda.data";
+import { validarCierreManual, resultadoDerivado } from "@/src/lib/catalogosAgendaVisitas";
 
 export type CreateActivityKind = "event" | "unplanned";
 export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; date?: string; time?: string; startAfterCreate: boolean; creationMode: CreateActivityKind; seed: number }
@@ -230,7 +231,8 @@ function useAgendaState() {
 
   const currentLocalTime = () => new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
 
-  const startCheckIn = (e: AgendaEvent): boolean => {
+  const startCheckIn = (e: AgendaEvent, objective: string): boolean => {
+    if (!objective.trim()) { setSnack({severity:"error",msg:"Selecciona el objetivo antes de iniciar Check-in."}); return false; }
     if (!canExecuteVisit(e)) return false;
 
     const open = events.find((x) => x.id !== e.id && x.status === "Check-in activo");
@@ -245,6 +247,7 @@ function useAgendaState() {
       ...e,
       kind: "realized",
       status: "Check-in activo",
+      objective,
       planned: e.planned ?? e.time,
       checkInAt: currentLocalTime(),
       checkInEpochMs: now,
@@ -258,10 +261,10 @@ function useAgendaState() {
     return true;
   };
 
-  const completeCheckOut = (e: AgendaEvent, data: { objective: string; result: string; findings: string }): string | null => {
+  const completeCheckOut = (e: AgendaEvent, data: { objective: string; result: string; findings: string; numeroFactura?:string; folioPapeleta?:string }): string | null => {
     if (role !== "advisor" || e.status !== "Check-in activo") return "La visita no está disponible para Check-out.";
-    if (!data.objective.trim()) return "Captura el objetivo de la visita.";
-    if (!data.result.trim()) return "Captura el resultado de la visita.";
+    const check = validarCierreManual(data.objective,{resultado:data.result,numeroFactura:data.numeroFactura,folioPapeleta:data.folioPapeleta,clienteNoAtendio:data.result==="CLIENTE_NO_ATENDIO"});
+    if (check) return check;
 
     const end = Date.now();
     const start = e.checkInEpochMs ?? end;
@@ -274,7 +277,9 @@ function useAgendaState() {
       checkOutEpochMs: end,
       duration,
       objective: data.objective.trim(),
-      result: data.result.trim(),
+      result: resultadoDerivado(data.objective,{numeroFactura:data.numeroFactura,folioPapeleta:data.folioPapeleta,clienteNoAtendio:data.result==="CLIENTE_NO_ATENDIO"}) ?? data.result.trim(),
+      numeroFactura:data.numeroFactura?.trim(),
+      folioPapeleta:data.folioPapeleta?.trim(),
       findings: data.findings.trim(),
       modifiedBy: actorName(),
       modifiedAt: nowMx(),
