@@ -208,8 +208,7 @@ export const EventDetailDialog = () => {
               <TextField fullWidth select required size="small" label="Resultado de la visita"
                 value={result} onChange={ev=>{setResult(ev.target.value);if(ev.target.value==="CLIENTE_NO_ATENDIO"){setNumeroFactura("");setFolioPapeleta("");}}}>
                 {resultadosSeleccionables(objective).map(item=><MenuItem key={item.codigo} value={item.codigo}>{item.nombre}</MenuItem>)}
-                {(objective==="COBRANZA"||objective==="GARANTIA_Y_DEVOLUCIONES") &&
-                  <MenuItem value="CLIENTE_ATENDIO" disabled>Cliente atendió (automático con comprobante)</MenuItem>}
+
               </TextField>
               {result!=="CLIENTE_NO_ATENDIO" && objective==="COBRANZA" && <TextField fullWidth required size="small" label="Número de factura pagada" value={numeroFactura} onChange={ev=>setNumeroFactura(ev.target.value)} />}
               {result!=="CLIENTE_NO_ATENDIO" && objective==="GARANTIA_Y_DEVOLUCIONES" && <TextField fullWidth required size="small" label="Folio de papeleta" value={folioPapeleta} onChange={ev=>setFolioPapeleta(ev.target.value)} />}
