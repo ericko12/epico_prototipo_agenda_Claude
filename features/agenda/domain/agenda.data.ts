@@ -107,7 +107,7 @@ export const ROLE_EXPLANATION: Record<string, string> = {
   managerEdit: "Gestor de equipo: consulta y administra eventos dentro de su jerarquía; puede cubrir rutas de su equipo.",
   managerRead: "Gestor de equipo en modo consulta.",
   consult: "Consulta ampliada: puede revisar agendas según alcance, sin modificar la operación.",
-  support: "Administrador de Agenda: consulta, soporte operativo y correcciones complementarias auditadas sobre visitas cerradas; no realiza cierres administrativos.",
+  support: "Administración / Soporte: consulta global de solo lectura; no crea, modifica ni ejecuta visitas.",
 };
 
 export const DAY_START = 8 * 60; // 08:00

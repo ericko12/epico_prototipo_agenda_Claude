@@ -23,13 +23,13 @@ export type TipoEvento = {
   permiteProductosNegados: boolean;
 };
 const noVisita = (codigo: string, nombre: string, relacion: Relacion, requiereDireccion=false): TipoEvento => ({
-  codigo,nombre,relacion,esVisita:false,requiereCliente:relacion==='CLIENTE',
-  requiereDireccion,habilitaCheckinCheckout:false,origen:'MANUAL',habilitadoMvp:true,
+  codigo,nombre,relacion,esVisita:false,requiereCliente:relacion==='CLIENTE'||relacion==='CLIENTE_O_LEAD',
+  requiereDireccion,habilitaCheckinCheckout:false,origen:'MANUAL',habilitadoMvp:relacion!=='SUCURSAL',
   listaObjetivoId:null,listaResultadoId:null,requiereObjetivo:false,requiereResultado:false,
   requiereHallazgos:false,permiteProductosNegados:false
 });
 const visita = (codigo: string,nombre: string,relacion: Relacion,origen:'MANUAL'|'SISTEMA',habilitadoMvp:boolean): TipoEvento=>({
-  codigo,nombre,relacion,esVisita:true,requiereCliente:relacion==='CLIENTE',
+  codigo,nombre,relacion,esVisita:true,requiereCliente:relacion==='CLIENTE'||relacion==='CLIENTE_O_LEAD',
   requiereDireccion:true,habilitaCheckinCheckout:true,origen,habilitadoMvp,
   listaObjetivoId:'OBJETIVOS_VISITA',listaResultadoId:'RESULTADOS_VISITA',
   requiereObjetivo:true,requiereResultado:true,requiereHallazgos:false,permiteProductosNegados:true

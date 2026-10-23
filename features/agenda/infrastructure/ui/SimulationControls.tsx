@@ -38,7 +38,7 @@ export const SimulationControls = () => {
           {a.role !== "advisor" && (
             <TextField select size="small" label="Detalle de otras agendas" value={a.detailVisibility} onChange={(e) => a.setDetailVisibility(e.target.value as DetailVisibility)} sx={field}>
               <MenuItem value="full">Detalle completo</MenuItem>
-              <MenuItem value="busy">Solo disponibilidad · “Ocupado”</MenuItem>
+
             </TextField>
           )}
           <Button variant="outlined" color="secondary" onClick={a.loadOpenVisitScenario} sx={{ borderRadius: "4px", fontWeight: FontWeightEnum.Medium, height: 40 }}>Cargar visita abierta</Button>

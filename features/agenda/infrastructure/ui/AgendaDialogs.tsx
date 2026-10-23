@@ -2,7 +2,7 @@
 // Diálogos con la misma estructura que features/common/infrastructure/ui/dialog/ModalGeneric.tsx:
 // título en mayúsculas, ícono de cierre, botón "Cerrar/Cancelar" outlined y acción principal contained.
 import { useEffect, useState } from "react";
-import { Alert, Autocomplete, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Autocomplete, Box, Button, Checkbox, FormControlLabel, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
@@ -11,7 +11,7 @@ import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { clientId, normalize } from "@/features/agenda/domain/agenda.data";
 import { ActivityType } from "@/features/agenda/domain/agenda.types";
-import { OBJETIVOS_VISITA, resultadosSeleccionables, resultadoDerivado, validarCierreManual } from "@/src/lib/catalogosAgendaVisitas";
+import { TIPOS_SELECCIONABLES, TIPOS_EVENTO, RESULTADOS_VISITA, OBJETIVOS_VISITA, resultadosSeleccionables, resultadoDerivado, validarCierreManual } from "@/src/lib/catalogosAgendaVisitas";
 import { EpicoLabel, Hint, statusVariant } from "./shared";
 
 const closeBtnSx = { borderRadius: "4px", minHeight: "32px", fontWeight: FontWeightEnum.Medium, color: ColorsEpico.ColorDarkCharcoal, borderColor: ColorsEpico.ColorGrayNeutral, fontSize: FontSizesEnum.Gamma };
@@ -92,6 +92,7 @@ export const EventDetailDialog = () => {
   const [objective, setObjective] = useState("");
   const [result, setResult] = useState("");
   const [findings, setFindings] = useState("");
+  const [productosNegados, setProductosNegados] = useState("");
   const [numeroFactura, setNumeroFactura] = useState("");
   const [folioPapeleta, setFolioPapeleta] = useState("");
   const [evidence, setEvidence] = useState<{name:string;size:number}[]>([]);
@@ -105,7 +106,8 @@ export const EventDetailDialog = () => {
     setNumeroFactura(e?.numeroFactura ?? "");
     setFolioPapeleta(e?.folioPapeleta ?? "");
     setCheckoutError(null);
-    setEvidence([]);
+    setProductosNegados(e?.productosNegados ?? "");
+    setEvidence(e?.evidence ?? []);
     setReviewing(false);
     setEvidenceError("");
   }, [e?.id, e?.status]);
@@ -126,12 +128,13 @@ export const EventDetailDialog = () => {
   const doCheckOut = () => {
     const error = validarCierreManual(objective, {resultado: result,numeroFactura,folioPapeleta,clienteNoAtendio:result==="CLIENTE_NO_ATENDIO"});
     if (error) { setCheckoutError(error); setReviewing(false); return; }
-    setCheckoutError(a.completeCheckOut(e, { objective, result: resultadoDerivado(objective,{numeroFactura,folioPapeleta,clienteNoAtendio:result==="CLIENTE_NO_ATENDIO"}) ?? result, findings, numeroFactura, folioPapeleta }));
+    setCheckoutError(a.completeCheckOut(e, { objective, productosNegados, evidence, result: resultadoDerivado(objective,{numeroFactura,folioPapeleta,clienteNoAtendio:result==="CLIENTE_NO_ATENDIO"}) ?? result, findings, numeroFactura, folioPapeleta }));
   };
   const attachFiles = (files: FileList | null) => {
     if (!files) return;
     const accepted = ["image/jpeg","image/png","application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
     const valid = Array.from(files).filter(file => accepted.includes(file.type) && file.size <= (file.type.startsWith("image/") ? 10 : 20)*1024*1024);
+    if (evidence.length+valid.length>10) {setEvidenceError('Puedes adjuntar hasta 10 archivos por visita.');return;}
     setEvidence(prev => [...prev,...valid.map(file=>({name:file.name,size:file.size}))]);
     setEvidenceError(valid.length===files.length?"":"Algunos archivos no se agregaron. Formatos propuestos: JPG, PNG, PDF, Word y Excel (imágenes hasta 10 MB, documentos hasta 20 MB).");
   };
@@ -142,7 +145,7 @@ export const EventDetailDialog = () => {
       onClose={close}
       maxWidth="sm"
       actions={
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: "100%" }}>
+        <Stack direction={{xs:"column",sm:"row"}} gap={1} alignItems="stretch" justifyContent="space-between" sx={{ width: "100%", "& button": {minHeight:44}, "& > div > button": {width:{xs:"100%",sm:"auto"}} }}>
           <Button variant="outlined" onClick={close} sx={closeBtnSx}>Cancelar</Button>
           <Box>
             {canCheckIn && <Button variant="contained" onClick={() => { if (!objective) { setCheckoutError("Selecciona el objetivo de la visita antes de iniciar."); return; } setCheckoutError(null); a.startCheckIn(e,objective); }} sx={saveBtnSx}>Iniciar Check-in</Button>}
@@ -153,7 +156,7 @@ export const EventDetailDialog = () => {
     >
       {a.detail.visitNowCreated && (
         <Alert severity="info" variant="outlined" sx={{ mb: 1.5, fontSize: FontSizesEnum.Epsilon }}>
-          <b>Flujo validado:</b> la visita no planeada ya tiene un evento de Agenda. El siguiente paso es iniciar Check-in sobre este evento; no se crea una visita huérfana.
+          <b>Visita no planeada:</b> selecciona el objetivo e inicia la visita. Se conserva su origen para seguimiento.
         </Alert>
       )}
       <Stack direction="row" gap={1} flexWrap="wrap">
@@ -164,7 +167,7 @@ export const EventDetailDialog = () => {
       <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "stretch", sm: "center" }} justifyContent="space-between" gap={1.5} sx={{ mt: 2 }}>
         <Box>
           <Typography fontSize={FontSizesEnum.Epsilon} fontWeight={FontWeightEnum.Bold} color={ColorsEpico.ColorDarkCharcoal}>Tipo de visita</Typography>
-          <Typography fontSize={FontSizesEnum.Delta} color={ColorsEpico.ColorBlack60}>{activityTypeLabel(e.activityType)}</Typography>
+          <Typography fontSize={FontSizesEnum.Delta} color={ColorsEpico.ColorBlack60}>{TIPOS_EVENTO.find(t=>t.codigo===e.tipoEventoCodigo)?.nombre ?? activityTypeLabel(e.activityType)}</Typography>
         </Box>
         {editable && (
           <Stack direction="row" spacing={1} justifyContent={{ xs: "flex-start", sm: "flex-end" }}>
@@ -179,7 +182,7 @@ export const EventDetailDialog = () => {
         <Fact label="Dirección" value={e.address} />
         <Fact label={`Hora ${e.kind === "planned" ? "programada" : "real"}`} value={`${e.time} · ${e.duration} min`} />
         {e.planned && <Fact label="Hora originalmente programada" value={e.planned} />}
-        {e.requiresEvidence && <Fact label="Evidencia" value="Requerida al completar" />}
+        <Fact label="Origen" value={e.origin ?? "planeada"} />
         <Fact label="Creado por" value={e.createdBy || a.profile.label} />
         <Fact label="Fecha / hora de creación" value={e.createdAt || "22/09/2026 · 07:45 · DUMMY"} />
         {e.modifiedBy && <Fact label="Última modificación" value={`${e.modifiedBy} · ${e.modifiedAt}`} />}
@@ -189,7 +192,7 @@ export const EventDetailDialog = () => {
 
       {(canCheckIn || e.status === "Check-in activo") && (
         <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${ColorsEpico.ColorLightBlueishGray}` }}>
-          <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Bold} sx={{ mb: 0.5 }}>Visita en curso</Typography>
+          <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Bold} sx={{ mb: 0.5 }}>{canCheckIn ? "Iniciar visita" : "Visita en curso"}</Typography>
           <Hint>{canCheckIn ? "Selecciona el objetivo antes de iniciar Check-in." : "Al finalizar, registra el resultado. Los hallazgos y productos negados son opcionales."}</Hint>
           <Stack spacing={1.5} sx={{ mt: 1.5 }}>
             <TextField
@@ -205,16 +208,16 @@ export const EventDetailDialog = () => {
               {OBJETIVOS_VISITA.map(item=><MenuItem key={item.codigo} value={item.codigo}>{item.nombre}</MenuItem>)}
             </TextField>
             {!canCheckIn && <>
-              <TextField fullWidth select required size="small" label="Resultado de la visita"
+              {(objective==='COBRANZA'||objective==='GARANTIA_Y_DEVOLUCIONES') ? <FormControlLabel control={<Checkbox checked={result==='CLIENTE_NO_ATENDIO'} onChange={ev=>{setResult(ev.target.checked?'CLIENTE_NO_ATENDIO':'');setNumeroFactura('');setFolioPapeleta('');}} />} label="Cliente no atendió" /> : <TextField fullWidth select required size="small" label="Resultado de la visita"
                 value={result} onChange={ev=>{setResult(ev.target.value);if(ev.target.value==="CLIENTE_NO_ATENDIO"){setNumeroFactura("");setFolioPapeleta("");}}}>
                 {resultadosSeleccionables(objective).map(item=><MenuItem key={item.codigo} value={item.codigo}>{item.nombre}</MenuItem>)}
 
-              </TextField>
+              </TextField>}
               {result!=="CLIENTE_NO_ATENDIO" && objective==="COBRANZA" && <TextField fullWidth required size="small" label="Número de factura pagada" value={numeroFactura} onChange={ev=>setNumeroFactura(ev.target.value)} />}
               {result!=="CLIENTE_NO_ATENDIO" && objective==="GARANTIA_Y_DEVOLUCIONES" && <TextField fullWidth required size="small" label="Folio de papeleta" value={folioPapeleta} onChange={ev=>setFolioPapeleta(ev.target.value)} />}
               {(objective==="COBRANZA"||objective==="GARANTIA_Y_DEVOLUCIONES") && (numeroFactura.trim()||folioPapeleta.trim()) && <Alert severity="info">Resultado automático: Cliente atendió</Alert>}
             </>}
-            <TextField
+            {!canCheckIn && <TextField
               fullWidth
               multiline
               minRows={2}
@@ -223,9 +226,10 @@ export const EventDetailDialog = () => {
               placeholder="Opcional"
               value={findings}
               onChange={(x) => setFindings(x.target.value)}
-            />
-            <Box sx={{p:1.5,border:"1px solid",borderColor:"divider",borderRadius:1}}>
-              <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta}>Evidencias de la visita {e.requiresEvidence ? "(requerida en este escenario)" : "(opcional en este escenario)"}</Typography>
+            />}
+            {!canCheckIn && ['PRESENTACION_PROPUESTA_COMERCIAL','VISITA_SERVICIO_SEGUIMIENTO'].includes(objective) && <TextField fullWidth multiline minRows={2} size="small" label="Productos negados" helperText="Opcional · registra los productos que el cliente solicitó y no se pudieron surtir." value={productosNegados} onChange={ev=>setProductosNegados(ev.target.value)} />}
+            {!canCheckIn && <Box sx={{p:1.5,border:"1px solid",borderColor:"divider",borderRadius:1}}>
+              <Typography fontWeight={FontWeightEnum.Bold} fontSize={FontSizesEnum.Delta}>Evidencias de la visita (opcional · máximo 10)</Typography>
               <Typography fontSize={FontSizesEnum.Epsilon} color="text.secondary" sx={{my:1}}>Puedes agregarlas durante la visita. En este simulador se muestran los nombres, pero no se almacenan ni se envían.</Typography>
               <Stack direction="row" flexWrap="wrap" gap={1}>
                 <Button component="label" variant="outlined" size="small">Tomar foto<input hidden type="file" accept="image/*" capture="environment" onChange={ev=>{attachFiles(ev.target.files);ev.target.value="";}} /></Button>
@@ -237,11 +241,11 @@ export const EventDetailDialog = () => {
                 <Typography fontSize={FontSizesEnum.Epsilon} sx={{overflowWrap:"anywhere"}}>{file.name} · {(file.size/1024/1024).toFixed(2)} MB</Typography>
                 <Button size="small" color="error" onClick={()=>setEvidence(old=>old.filter((_,i)=>i!==index))}>Quitar</Button>
               </Stack>)}
-            </Box>
+            </Box>}
             {reviewing && <Alert severity="info" variant="outlined">
               <b>Revisar y finalizar:</b> confirma los datos antes del Check-out.
-              <Box>Objetivo: {objective || "Sin capturar"}</Box>
-              <Box>Resultado: {resultadoDerivado(objective,{numeroFactura,folioPapeleta,clienteNoAtendio:result==="CLIENTE_NO_ATENDIO"}) || result || "Sin capturar"}</Box>
+              <Box>Objetivo: {OBJETIVOS_VISITA.find(o=>o.codigo===objective)?.nombre || "Sin capturar"}</Box>
+              <Box>Resultado: {RESULTADOS_VISITA.find(r=>r.codigo===(resultadoDerivado(objective,{numeroFactura,folioPapeleta,clienteNoAtendio:result==="CLIENTE_NO_ATENDIO"}) || result))?.nombre || "Sin capturar"}</Box>
               {numeroFactura && <Box>Factura: {numeroFactura}</Box>}
               {folioPapeleta && <Box>Papeleta: {folioPapeleta}</Box>}
               <Box>Hallazgos: {findings || "Sin notas"}</Box>
@@ -253,12 +257,22 @@ export const EventDetailDialog = () => {
         </Box>
       )}
 
+      {['Check-out realizado','Cierre automático'].includes(e.status) && <Box sx={{mt:2}}>
+        <Fact label="Objetivo" value={OBJETIVOS_VISITA.find(o=>o.codigo===e.objective)?.nombre ?? 'Sin capturar'} />
+        <Fact label="Resultado" value={RESULTADOS_VISITA.find(r=>r.codigo===e.result)?.nombre ?? 'Sin capturar'} />
+        {e.numeroFactura && <Fact label="Factura pagada" value={e.numeroFactura} />}
+        {e.folioPapeleta && <Fact label="Folio de papeleta" value={e.folioPapeleta} />}
+        <Fact label="Hallazgos" value={e.findings || 'Sin notas'} />
+        {e.productosNegados && <Fact label="Productos negados" value={e.productosNegados} />}
+        {e.evidence?.map((file,i)=><Fact key={i} label="Evidencia (nombre de archivo simulado)" value={file.name} />)}
+      </Box>}
+      {e.cancelReason && <Fact label="Motivo de cancelación" value={e.cancelReason} />}
       {(e.checkInAt || e.checkOutAt) && (
         <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${ColorsEpico.ColorLightBlueishGray}` }}>
           <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Bold}>Ejecución</Typography>
           {e.checkInAt && <Fact label="Check-in" value={e.checkInAt} />}
           {e.checkOutAt && <Fact label="Check-out" value={e.checkOutAt} />}
-          {e.status === "Check-out realizado" && <Fact label="Duración real" value={`${e.duration} min`} />}
+          {["Check-out realizado","Cierre automático"].includes(e.status) && <Fact label="Duración real" value={`${e.duration} min`} />}
           {e.automaticClose && <EpicoLabel variant="eta">Cierre automático</EpicoLabel>}
         </Box>
       )}
@@ -269,7 +283,7 @@ export const EventDetailDialog = () => {
 export const EventFormDialog = () => {
   const a = useAgenda();
   const f = a.form;
-  const [v, setV] = useState({ type: "visit" as ActivityType, client: "", address: "", date: "2026-09-22", time: "10:30", duration: "30", quote: "", description: "" });
+  const [v, setV] = useState({ tipoEventoCodigo: "AGENDA", type: "visit" as ActivityType, client: "", address: "", date: "2026-09-22", time: "10:30", duration: "30", quote: "", description: "" });
   const [error, setError] = useState<string | null>(null);
   const [clientQuery, setClientQuery] = useState("");
   useEffect(() => {
@@ -279,7 +293,7 @@ export const EventFormDialog = () => {
     const initialClient = f.client ?? editing?.title ?? firstPortfolio?.[0] ?? "";
     const initialAddress = f.address ?? editing?.address ?? a.visiblePortfolio.find((x) => x[0] === initialClient)?.[1] ?? firstPortfolio?.[1] ?? "";
     setV({
-      type: editing?.activityType ?? "visit", client: initialClient, address: initialAddress, date: f.date ?? editing?.date ?? new Date().toISOString().slice(0, 10),
+      tipoEventoCodigo: editing?.tipoEventoCodigo ?? (editing?.activityType==="internal" ? "TRASLADO" : "AGENDA"), type: editing?.activityType ?? "visit", client: initialClient, address: initialAddress, date: f.date ?? editing?.date ?? new Date().toLocaleDateString("sv-SE"),
       time: f.time ?? "10:30", duration: String(editing?.duration ?? 30), quote: editing?.quote ?? "", description: editing?.description ?? "",
     });
     setClientQuery(initialClient);
@@ -298,12 +312,13 @@ export const EventFormDialog = () => {
       });
   const addresses = Array.from(new Set(a.visiblePortfolio.filter((x) => x[0] === v.client).map((x) => x[1])));
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((p) => ({ ...p, [k]: e.target.value }));
+  const config = TIPOS_SELECCIONABLES.find(t=>t.codigo===v.tipoEventoCodigo);
   const save = () => setError(a.saveEvent({ ...v, duration: Number(v.duration) }));
   const creationMode: CreationSelectorValue = f.creationMode ?? (f.startAfterCreate ? "unplanned" : "event");
   const changeCreationMode = (next: CreationSelectorValue) => {
     setError(null);
     a.setFormCreationMode(next);
-    if (next === "unplanned") setV((current) => ({ ...current, type: "visit" }));
+    if (next === "unplanned") setV((current) => ({ ...current, type: "visit", tipoEventoCodigo:"AGENDA" }));
   };
 
   return (
@@ -313,15 +328,13 @@ export const EventFormDialog = () => {
         {f.editingId == null && <CreationTypeSelector value={creationMode} onChange={changeCreationMode} />}
         {creationMode !== "unplanned" && (
           <Box>
-            <TextField select fullWidth size="small" label="Tipo de evento" value={v.type} onChange={set("type")}>
-              <MenuItem value="visit">Visita a cliente</MenuItem>
-              <MenuItem value="promo">Entrega de material promocional</MenuItem>
-              <MenuItem value="internal">Otra actividad</MenuItem>
+            <TextField select fullWidth size="small" label="Tipo de evento" value={v.tipoEventoCodigo} onChange={e=>{const c=TIPOS_SELECCIONABLES.find(t=>t.codigo===e.target.value)!;setV(p=>({...p,tipoEventoCodigo:c.codigo,type:c.esVisita?"visit":"internal"}));}}>
+              {TIPOS_SELECCIONABLES.map(t=><MenuItem key={t.codigo} value={t.codigo}>{t.nombre}</MenuItem>)}
             </TextField>
-            {v.type === "promo" && <Hint sx={{ mt: 0.5 }}>Este tipo requiere evidencia al completarse. La evidencia se adjunta en la ejecución/resultado, no en la planeación.</Hint>}
+
           </Box>
         )}
-        {v.type === "visit" && (
+        {config?.requiereCliente && (
           <Box>
             <Autocomplete
               fullWidth
@@ -366,7 +379,7 @@ export const EventFormDialog = () => {
             />
           </Box>
         )}
-        {v.type === "visit" && (
+        {config?.requiereDireccion && (
           <TextField
             select
             fullWidth
@@ -380,11 +393,11 @@ export const EventFormDialog = () => {
             {addresses.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
           </TextField>
         )}
-        <Stack direction="row" spacing={2}>
+        <Stack direction={{xs:"column",sm:"row"}} spacing={2}>
           <TextField fullWidth size="small" type="date" label="Fecha" value={v.date} onChange={set("date")} slotProps={{ inputLabel: { shrink: true } }} />
           <TextField fullWidth size="small" type="time" label="Hora" value={v.time} onChange={set("time")} slotProps={{ inputLabel: { shrink: true } }} />
         </Stack>
-        <Stack direction="row" spacing={2}>
+        <Stack direction={{xs:"column",sm:"row"}} spacing={2}>
           <TextField fullWidth size="small" type="number" label="Duración estimada (min)" value={v.duration} onChange={set("duration")} slotProps={{ htmlInput: { min: 1, step: 1 } }} />
           <TextField fullWidth size="small" label="Cotización relacionada" placeholder="Opcional · COT-000123" value={v.quote} onChange={set("quote")} />
         </Stack>

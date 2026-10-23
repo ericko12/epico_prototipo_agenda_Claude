@@ -3,12 +3,12 @@
 // roles/alcance, traslapes, visitas abiertas y cierre automático de visita olvidada.
 // En Épico esto viviría en Redux Toolkit (features/agenda/application/redux); aquí es un Context
 // para que la versión sintética no dependa del store real.
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   AgendaEvent, Client, DetailVisibility, OwnerId, OwnerProfile, Role, Scope, SummaryFilter, View,
 } from "@/features/agenda/domain/agenda.types";
 import { endMin, hhmm, initialProfiles, mins, nowMx, ROLE_EXPLANATION } from "@/features/agenda/domain/agenda.data";
-import { validarCierreManual, resultadoDerivado } from "@/src/lib/catalogosAgendaVisitas";
+import { validarCierreManual, resultadoDerivado, TIPOS_SELECCIONABLES, OBJETIVOS_VISITA } from "@/src/lib/catalogosAgendaVisitas";
 
 export type CreateActivityKind = "event" | "unplanned";
 export interface FormState { open: boolean; editingId: AgendaEvent["id"] | null; title: string; client?: string; address?: string; date?: string; time?: string; startAfterCreate: boolean; creationMode: CreateActivityKind; seed: number }
@@ -46,12 +46,25 @@ function useAgendaState() {
   const [showGaps, setShowGaps] = useState(false);
 
   const profile = profiles[owner];
-  const events = profile.events;
+  const events = profile.events.map(e => {
+    if (e.status !== 'Programada' || e.absence) return e;
+    const date = e.date ?? '2026-09-22';
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    return date < today || (date === today && endMin(e) < now.getHours()*60+now.getMinutes())
+      ? {...e,status:e.activityType==='visit'?'Vencida/no ejecutada':'Pasado'} : e;
+  });
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    try { const saved = localStorage.getItem('epico-agenda-qa-v2'); if (saved) setProfiles(JSON.parse(saved)); } catch { /* Mantener datos demo si el almacenamiento no está disponible. */ }
+    setHydrated(true);
+  }, []);
+  useEffect(() => { if(hydrated) { try { localStorage.setItem('epico-agenda-qa-v2',JSON.stringify(profiles)); } catch { /* La sesión sigue operativa sin persistencia local. */ } } },[profiles,hydrated]);
   const clients = profile.clients;
 
   // ---------- permisos ----------
-  const canEdit = role === "advisor" || role === "support" || (role === "manager" && managerCanEdit);
-  const hideDetail = detailVisibility === "busy" && role !== "advisor";
+  const canEdit = role === "advisor" || (role === "manager" && managerCanEdit);
+  const hideDetail = false;
   const eventLabel = useCallback((e: AgendaEvent) => (hideDetail ? "Ocupado" : e.title), [hideDetail]);
   const actorName = () => role === "advisor" ? profile.label : role === "manager" ? "Gestor de equipo DUMMY" : role === "support" ? "Administrador de Agenda DUMMY" : "Consulta ampliada DUMMY";
   const roleExplanation = role === "advisor" ? ROLE_EXPLANATION.advisor : role === "manager" ? (managerCanEdit ? ROLE_EXPLANATION.managerEdit : ROLE_EXPLANATION.managerRead) : role === "consult" ? ROLE_EXPLANATION.consult : ROLE_EXPLANATION.support;
@@ -162,18 +175,24 @@ function useAgendaState() {
   const openEdit = (e: AgendaEvent) => { setDetail({ event: null }); setForm({ open: true, editingId: e.id, title: "Editar / reprogramar visita", client: e.title, address: e.address, date: e.date, time: e.time, startAfterCreate: false, creationMode: "event", seed: Date.now() }); };
   const closeForm = () => setForm((f) => ({ ...f, open: false, editingId: null }));
   /** Devuelve un mensaje de error o null si se guardó. */
-  const saveEvent = (v: { type: AgendaEvent["activityType"]; client: string; address: string; date: string; time: string; duration: number; quote: string; description: string }): string | null => {
+  const saveEvent = (v: { tipoEventoCodigo: string; type: AgendaEvent["activityType"]; client: string; address: string; date: string; time: string; duration: number; quote: string; description: string }): string | null => {
+    if (!canEdit || (form.editingId != null && !canEditEvent(events.find(e=>e.id===form.editingId)!))) return "No puedes modificar este evento.";
+    if (!navigator.onLine) return "Necesitas conexión para guardar la actividad.";
+    const config = TIPOS_SELECCIONABLES.find(t=>t.codigo===v.tipoEventoCodigo);
+    if (!config) return "Selecciona un tipo de evento disponible en el MVP.";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v.date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(v.time)) return "Captura una fecha y hora válidas.";
+    if (config.requiereCliente && !visiblePortfolio.some(c=>c[0]===v.client && c[1]===v.address)) return "Selecciona un cliente y una dirección de tu cartera.";
     if (v.type === "visit" && (!v.client.trim() || !v.address.trim())) return "Selecciona un cliente y una dirección para continuar.";
     if (!Number.isFinite(v.duration) || v.duration <= 0) return "Captura una duración mayor que cero.";
     const today = todayIso();
     if (v.date < today || (v.date === today && mins(v.time) < currentMinute())) return "No puedes programar una visita en un horario pasado.";
     const prev = form.editingId != null ? events.find((x) => x.id === form.editingId) : undefined;
     const n: AgendaEvent = {
-      id: form.editingId ?? Date.now(), title: v.client, address: v.address, time: v.time, duration: v.duration, kind: "planned", status: "Programada",
-      date: v.date, quote: v.quote, description: v.description, activityType: v.type, requiresEvidence: v.type === "promo",
+      id: form.editingId ?? Date.now(), title: config.requiereCliente ? v.client : config.nombre, address: config.requiereDireccion ? v.address : "Sin dirección", tipoEventoCodigo: config.codigo, origin: prev?.origin ?? (form.startAfterCreate ? "no planeada" : "planeada"), time: v.time, duration: v.duration, kind: "planned", status: "Programada",
+      date: v.date, quote: v.quote, description: v.description, activityType: v.type, requiresEvidence: false,
       createdBy: prev?.createdBy || actorName(), createdAt: prev?.createdAt || nowMx(), modifiedBy: prev ? actorName() : null, modifiedAt: prev ? nowMx() : null,
     };
-    const conflict = n.activityType === "internal" ? null : events.find((x) => x.id !== n.id && x.kind === "planned" && !x.absence && x.activityType !== "internal" && x.status !== "Cancelada" && (!x.date || x.date === n.date) && overlaps(n, x));
+    const conflict = n.activityType !== "visit" || n.origin === "no planeada" ? null : events.find((x) => x.id !== n.id && x.kind === "planned" && !x.absence && x.activityType === "visit" && x.origin !== "no planeada" && !["Cancelada","Ejecutada"].includes(x.status) && (!x.date || x.date === n.date) && overlaps(n, x));
     if (conflict) return `No se puede guardar. La visita se empalma con ${conflict.title} (${conflict.time}). Ajusta el horario para continuar.`;
     updateEvents((evs) => (form.editingId != null ? evs.map((x) => (x.id === form.editingId ? n : x)) : [...evs, n]));
     const visitNow = form.startAfterCreate;
@@ -182,11 +201,12 @@ function useAgendaState() {
     return null;
   };
   const cancelEvent = (e: AgendaEvent, reason: string) => {
+    if (!canEditEvent(e) || !navigator.onLine || !reason.trim()) return;
     updateEvents((evs) => evs.map((x) => (x.id === e.id ? { ...x, status: "Cancelada", cancelReason: reason, modifiedBy: actorName(), modifiedAt: nowMx() } : x)));
     setCancelTarget(null); setDetail({ event: null });
     setSnack({ severity: "info", msg: `Evento cancelado: ${e.title} (${e.time}).` });
   };
-  const canEditEvent = (e: AgendaEvent) => canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre automático"].includes(e.status);
+  const canEditEvent = (e: AgendaEvent) => !!e && canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre automático", "Ejecutada"].includes(e.status);
 
   const rescheduleEvent = (e: AgendaEvent, date: string, time: string): boolean => {
     if (!canEditEvent(e)) {
@@ -194,6 +214,7 @@ function useAgendaState() {
       return false;
     }
 
+    if (!navigator.onLine || date < todayIso() || (date === todayIso() && mins(time) < currentMinute())) { setSnack({severity:'error',msg:'No puedes reprogramar en el pasado o sin conexión.'}); return false; }
     const candidate = { ...e, date, time };
     const conflict = candidate.activityType === "visit"
       ? events.find((x) =>
@@ -227,12 +248,14 @@ function useAgendaState() {
     role === "advisor" &&
     e.activityType === "visit" &&
     !e.absence &&
-    e.status === "Programada";
+    ["Programada","Vencida/no ejecutada"].includes(e.status) &&
+    (e.date ?? "2026-09-22") === todayIso();
 
   const currentLocalTime = () => new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
 
   const startCheckIn = (e: AgendaEvent, objective: string): boolean => {
-    if (!objective.trim()) { setSnack({severity:"error",msg:"Selecciona el objetivo antes de iniciar Check-in."}); return false; }
+    if (!navigator.onLine) { setSnack({severity:"error",msg:"Necesitas conexión para iniciar la visita."}); return false; }
+    if (!OBJETIVOS_VISITA.some(o=>o.codigo===objective)) { setSnack({severity:"error",msg:"Selecciona el objetivo antes de iniciar Check-in."}); return false; }
     if (!canExecuteVisit(e)) return false;
 
     const open = events.find((x) => x.id !== e.id && x.status === "Check-in activo");
@@ -245,24 +268,31 @@ function useAgendaState() {
     const now = Date.now();
     const updated: AgendaEvent = {
       ...e,
+      id: `execution-${now}`,
+      plannedEventId: events.some(x=>x.id===e.id) ? e.id : undefined,
+      executionCode: 'VISITA_INICIADA',
+      origin: e.origin ?? 'planeada',
+      time: currentLocalTime(),
+      date: todayIso(),
       kind: "realized",
       status: "Check-in activo",
       objective,
-      planned: e.planned ?? e.time,
+      planned: e.origin === "no planeada" ? undefined : (e.planned ?? e.time),
       checkInAt: currentLocalTime(),
       checkInEpochMs: now,
       locationStatus: "En rango",
       modifiedBy: actorName(),
       modifiedAt: nowMx(),
     };
-    updateEvents((evs) => evs.map((x) => (x.id === e.id ? updated : x)));
+    updateEvents((evs) => [...evs.map((x) => x.id === e.id ? {...x,status:"Ejecutada"} : x), updated]);
     setDetail({ event: updated });
     setSnack({ severity: "success", msg: `Check-in registrado para ${e.title}.` });
     return true;
   };
 
-  const completeCheckOut = (e: AgendaEvent, data: { objective: string; result: string; findings: string; numeroFactura?:string; folioPapeleta?:string }): string | null => {
-    if (role !== "advisor" || e.status !== "Check-in activo") return "La visita no está disponible para Check-out.";
+  const completeCheckOut = (e: AgendaEvent, data: { objective: string; result: string; findings: string; productosNegados?:string; evidence?:{name:string;size:number}[]; numeroFactura?:string; folioPapeleta?:string }): string | null => {
+    if (!navigator.onLine) return "Necesitas conexión para finalizar la visita.";
+    if (role !== "advisor" || !events.some(x=>x.id===e.id && x.status==="Check-in activo")) return "La visita no está disponible para Check-out.";
     const check = validarCierreManual(data.objective,{resultado:data.result,numeroFactura:data.numeroFactura,folioPapeleta:data.folioPapeleta,clienteNoAtendio:data.result==="CLIENTE_NO_ATENDIO"});
     if (check) return check;
 
@@ -273,6 +303,7 @@ function useAgendaState() {
       ...e,
       kind: "realized",
       status: "Check-out realizado",
+      executionCode: "VISITA_REALIZADA",
       checkOutAt: currentLocalTime(),
       checkOutEpochMs: end,
       duration,
@@ -281,6 +312,8 @@ function useAgendaState() {
       numeroFactura:data.numeroFactura?.trim(),
       folioPapeleta:data.folioPapeleta?.trim(),
       findings: data.findings.trim(),
+      productosNegados: data.productosNegados?.trim(),
+      evidence: data.evidence,
       modifiedBy: actorName(),
       modifiedAt: nowMx(),
     };
@@ -300,12 +333,18 @@ function useAgendaState() {
   const simulateDayClose = () => {
     const open = events.find((e) => e.kind === "realized" && e.status === "Check-in activo");
     if (!open) { setCloseResult({ type: "info", text: "No hay una visita abierta para simular el cierre automático." }); return; }
-    updateEvents((evs) => evs.map((e) => (e.id === open.id ? { ...e, status: "Cierre automático", duration: 10, automaticClose: true, checkOutAt: "22:00" } : e)));
+    if (detail.event?.id===open.id) setDetail({event:null});
+    updateEvents((evs) => evs.map((e) => (e.id === open.id ? { ...e, status: "Cierre automático", executionCode: "VISITA_REALIZADA", duration: 10, automaticClose: true, checkOutAt: "22:00" } : e)));
     setCloseResult({ type: "ok", text: "Simulación: la visita permaneció abierta y fue cerrada automáticamente a las 22:00, hora de Ciudad de México, con duración excepcional de 10 minutos." });
   };
 
+  const startFromClient = (client: Client) => {
+    if (role !== 'advisor') return;
+    const planned = events.find(e=>e.title===client[0] && e.address===client[1] && e.origin!=='no planeada' && canExecuteVisit(e));
+    setDetail({event:planned ?? {id:`draft-${Date.now()}`,title:client[0],address:client[1],date:todayIso(),time:currentLocalTime(),duration:30,kind:'planned',status:'Programada',activityType:'visit',tipoEventoCodigo:'AGENDA',origin:'no planeada'}});
+  };
   return {
-    profiles, owner, setOwner, profile, events, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
+    startFromClient, profiles, owner, setOwner, profile, events, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,
     view, setView, selectedDate, setSelectedDate, selectedGridSlot, setSelectedGridSlot, summaryFilter, setSummaryFilter, matches, summary, portfolioScope, setPortfolioScope, search, setSearch,
     canEdit, hideDetail, eventLabel, roleExplanation, visiblePortfolio, resolveNewVisitDrop,
     form, openForm, setFormCreationMode, openEdit, closeForm, saveEvent, detail, setDetail,

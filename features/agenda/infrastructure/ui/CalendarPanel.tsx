@@ -612,7 +612,7 @@ export const CalendarPanel = () => {
           </Stack>
 
           <Stack direction="row" alignItems="center" justifyContent={{ xs: "space-between", md: "flex-end" }} gap={1}>
-            <Tabs value={view} onChange={(_, v) => setView(v)} sx={{ minHeight: 40, "& .MuiTab-root": { minHeight: 40, py: 0.5, px: 2 } }}>
+            <Tabs value={view} onChange={(_, v) => setView(v)} sx={{ minHeight: 40, minWidth:0, "& .MuiTab-root": { minHeight: 40, py: 0.5, px: {xs:1,sm:2}, minWidth:{xs:60,sm:90} } }}>
               <Tab value="day" label="Día" />
               <Tab value="week" label="Semana" />
               <Tab value="month" label="Mes" />

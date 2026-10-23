@@ -37,6 +37,12 @@ export interface AgendaEvent {
   objective?: string;
   result?: string;
   findings?: string;
+  tipoEventoCodigo?: string;
+  executionCode?: 'VISITA_INICIADA' | 'VISITA_REALIZADA';
+  plannedEventId?: string | number;
+  origin?: 'planeada' | 'no planeada';
+  productosNegados?: string;
+  evidence?: {name:string;size:number}[];
   numeroFactura?: string;
   folioPapeleta?: string;
   locationStatus?: "En rango" | "Fuera de rango" | "Sin ubicación válida";

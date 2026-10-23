@@ -1,5 +1,5 @@
 "use client";
-import { Box, InputAdornment, MenuItem, TextField, Typography } from "@mui/material";
+import { Box, Button, InputAdornment, MenuItem, TextField, Typography } from "@mui/material";
 import { DragIndicator, Search } from "@mui/icons-material";
 import { ColorsEpico } from "@/features/common/domain/enums/ColorsEpico";
 import { FontSizesEnum } from "@/features/common/domain/enums/FontSizes";
@@ -51,6 +51,7 @@ const Portfolio = () => {
               <Typography fontSize={FontSizesEnum.Omega} color={ColorsEpico.ColorBlack60}>
                 {clientId(c)} · {c[1]}{c[4] ? ` · Responsable original: ${c[4]}` : ""}
               </Typography>
+              {a.role==='advisor' && <Button size="small" variant="outlined" onClick={ev=>{ev.stopPropagation();a.startFromClient(c);}} sx={{mt:1,minHeight:40}}>Iniciar visita</Button>}
             </Box>
           </Box>
         ))}
@@ -96,13 +97,17 @@ export const SidePanel = () => {
       <Portfolio />
 
       <Hint sx={{ mt: 2 }}>
-        Los horarios se muestran como hora local del asesor en esta simulación.
+        Los horarios se muestran en la zona horaria del dispositivo.
       </Hint>
 
+      <Box sx={{mt:2}}>
+        <SectionTitle>Historial de visitas y cancelaciones</SectionTitle>
+        {a.events.filter(e=>['Check-out realizado','Cierre automático','Cancelada'].includes(e.status)).map(e=><Button key={e.id} fullWidth variant="text" onClick={()=>a.setDetail({event:e})} sx={{justifyContent:'flex-start',textAlign:'left',mb:1}}>{e.date ?? '2026-09-22'} · {e.title} · {e.status}</Button>)}
+      </Box>
       <Box sx={{ mt: 2, p: 1.5, border: `1px solid ${ColorsEpico.ColorLightBlueishGray}`, borderRadius: "8px" }}>
         <SectionTitle sx={{ fontSize: FontSizesEnum.Delta }}>Reglas de ejecución</SectionTitle>
         {[
-          "Toda visita debe tener un evento de Agenda antes del Check-in. Si surge durante la jornada, primero se crea el evento y después se inicia la visita.",
+          "Puedes iniciar desde el cliente. Si hay una visita planeada para hoy en esa dirección, se asocia; de lo contrario se registra como no planeada.",
           "No se permite un nuevo Check-in mientras exista una visita abierta.",
           "Si existe un Check-in abierto al intentar iniciar la siguiente visita, el asesor debe recibir la advertencia y cerrar primero la visita anterior.",
           "Si la última visita del día permanece abierta, el asesor puede realizar Check-out manual antes del corte con su duración real. Si sigue abierta a las 22:00, hora de Ciudad de México, el sistema la cierra automáticamente y registra una duración excepcional de 10 minutos.",
