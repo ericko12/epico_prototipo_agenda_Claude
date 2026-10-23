@@ -192,7 +192,7 @@ function useAgendaState() {
       date: v.date, quote: v.quote, description: v.description, activityType: v.type, requiresEvidence: false,
       createdBy: prev?.createdBy || actorName(), createdAt: prev?.createdAt || nowMx(), modifiedBy: prev ? actorName() : null, modifiedAt: prev ? nowMx() : null,
     };
-    const conflict = n.activityType !== "visit" || n.origin === "no planeada" ? null : events.find((x) => x.id !== n.id && x.kind === "planned" && !x.absence && x.activityType === "visit" && x.origin !== "no planeada" && !["Cancelada","Ejecutada"].includes(x.status) && (!x.date || x.date === n.date) && overlaps(n, x));
+    const conflict = n.activityType !== "visit" || n.origin === "no planeada" ? null : events.find((x) => x.id !== n.id && x.kind === "planned" && !x.absence && x.activityType === "visit" && x.origin !== "no planeada" && !["Cancelada","Ejecutada"].includes(x.status) && (x.date ?? "2026-09-22") === n.date && overlaps(n, x));
     if (conflict) return `No se puede guardar. La visita se empalma con ${conflict.title} (${conflict.time}). Ajusta el horario para continuar.`;
     updateEvents((evs) => (form.editingId != null ? evs.map((x) => (x.id === form.editingId ? n : x)) : [...evs, n]));
     const visitNow = form.startAfterCreate;
@@ -216,12 +216,13 @@ function useAgendaState() {
 
     if (!navigator.onLine || date < todayIso() || (date === todayIso() && mins(time) < currentMinute())) { setSnack({severity:'error',msg:'No puedes reprogramar en el pasado o sin conexión.'}); return false; }
     const candidate = { ...e, date, time };
-    const conflict = candidate.activityType === "visit"
+    const conflict = candidate.activityType === "visit" && candidate.origin !== "no planeada"
       ? events.find((x) =>
           x.id !== candidate.id &&
           x.kind === "planned" &&
           !x.absence &&
-          x.status !== "Cancelada" &&
+          !["Cancelada", "Ejecutada"].includes(x.status) &&
+          x.origin !== "no planeada" &&
           x.activityType === "visit" &&
           (x.date ?? "2026-09-22") === date &&
           overlaps(candidate, x)
