@@ -9,7 +9,10 @@ const check=(f)=>{f();checks++;};
 check(()=>assert.equal(c.OBJETIVOS_VISITA.length,4));
 check(()=>assert.equal(c.TIPOS_EVENTO.length,13));
 check(()=>assert.equal(new Set(c.TIPOS_EVENTO.map(t=>t.codigo)).size,13));
-check(()=>assert.ok(c.TIPOS_SELECCIONABLES.every(t=>t.origen==='MANUAL' && !['SUCURSAL','LEAD'].includes(t.relacion))));
+check(()=>assert.equal(c.TIPOS_SELECCIONABLES.length,9));
+check(()=>assert.ok(c.TIPOS_SELECCIONABLES.every(t=>t.origen==='MANUAL' && t.relacion!=='LEAD')));
+check(()=>assert.ok(c.TIPOS_SELECCIONABLES.filter(t=>t.codigo!=='AGENDA').every(t=>!t.esVisita && !t.habilitaCheckinCheckout)));
+check(()=>assert.deepEqual(Array.from(c.TIPOS_SELECCIONABLES.filter(t=>t.codigo!=='AGENDA').map(t=>t.nombre)),['Actividad phone day','Frente APYMSA','Inventario de consigna','Levantamiento parque vehicular','Otras actividades/Administrativas','Planeación comercial','Reunión Remota/Presencial','Traslado']));
 check(()=>assert.ok(!c.TIPOS_SELECCIONABLES.some(t=>['VACACIONES','VISITA_INICIADA','VISITA_REALIZADA','VISITA_A_PROSPECTO'].includes(t.codigo))));
 for(const objective of ['PRESENTACION_PROPUESTA_COMERCIAL','VISITA_SERVICIO_SEGUIMIENTO']) {
  for(const result of ['CON_VENTA','SIN_VENTA','CLIENTE_NO_ATENDIO']) check(()=>assert.equal(c.validarCierreManual(objective,{resultado:result}),null));

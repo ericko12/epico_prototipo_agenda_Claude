@@ -24,7 +24,7 @@ export type TipoEvento = {
 };
 const noVisita = (codigo: string, nombre: string, relacion: Relacion, requiereDireccion=false): TipoEvento => ({
   codigo,nombre,relacion,esVisita:false,requiereCliente:relacion==='CLIENTE'||relacion==='CLIENTE_O_LEAD',
-  requiereDireccion,habilitaCheckinCheckout:false,origen:'MANUAL',habilitadoMvp:relacion!=='SUCURSAL',
+  requiereDireccion,habilitaCheckinCheckout:false,origen:'MANUAL',habilitadoMvp:true,
   listaObjetivoId:null,listaResultadoId:null,requiereObjetivo:false,requiereResultado:false,
   requiereHallazgos:false,permiteProductosNegados:false
 });
@@ -41,7 +41,7 @@ export const TIPOS_EVENTO: readonly TipoEvento[] = [
   noVisita('LEVANTAMIENTO_PARQUE_VEHICULAR','Levantamiento parque vehicular','CLIENTE_O_LEAD',true),
   noVisita('OTRAS_ACTIVIDADES_ADMINISTRATIVAS','Otras actividades/Administrativas','SUCURSAL'),
   noVisita('PLANEACION_COMERCIAL','Planeación comercial','SUCURSAL'),
-  {...noVisita('REUNION_REMOTA_PRESENCIAL','Reunión Remota/Presencial','SUCURSAL'),habilitaCheckinCheckout:true,habilitadoMvp:false},
+  noVisita('REUNION_REMOTA_PRESENCIAL','Reunión Remota/Presencial','SUCURSAL'),
   noVisita('TRASLADO','Traslado','NINGUNA'),
   {...noVisita('VACACIONES','Vacaciones','NINGUNA'),habilitadoMvp:false},
   visita('AGENDA','Agenda','CLIENTE','MANUAL',true),
