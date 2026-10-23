@@ -11,6 +11,7 @@ import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { clientId, normalize } from "@/features/agenda/domain/agenda.data";
 import { ActivityType } from "@/features/agenda/domain/agenda.types";
+import { OBJETIVOS_VISITA, RESULTADOS_VISITA, resultadosSeleccionables, resultadoDerivado, validarCierreManual } from "@/src/lib/catalogosAgendaVisitas";
 import { EpicoLabel, Hint, statusVariant } from "./shared";
 
 const closeBtnSx = { borderRadius: "4px", minHeight: "32px", fontWeight: FontWeightEnum.Medium, color: ColorsEpico.ColorDarkCharcoal, borderColor: ColorsEpico.ColorGrayNeutral, fontSize: FontSizesEnum.Gamma };
@@ -91,6 +92,8 @@ export const EventDetailDialog = () => {
   const [objective, setObjective] = useState("");
   const [result, setResult] = useState("");
   const [findings, setFindings] = useState("");
+  const [numeroFactura, setNumeroFactura] = useState("");
+  const [folioPapeleta, setFolioPapeleta] = useState("");
   const [evidence, setEvidence] = useState<{name:string;size:number}[]>([]);
   const [reviewing, setReviewing] = useState(false);
   const [evidenceError, setEvidenceError] = useState("");
@@ -99,6 +102,8 @@ export const EventDetailDialog = () => {
     setObjective(e?.objective ?? "");
     setResult(e?.result ?? "");
     setFindings(e?.findings ?? "");
+    setNumeroFactura(e?.numeroFactura ?? "");
+    setFolioPapeleta(e?.folioPapeleta ?? "");
     setCheckoutError(null);
     setEvidence([]);
     setReviewing(false);
@@ -119,9 +124,9 @@ export const EventDetailDialog = () => {
   const canCheckIn = a.canExecuteVisit(e);
   const canCheckOut = a.role === "advisor" && e.status === "Check-in activo";
   const doCheckOut = () => {
-    if (!objective.trim() || !result.trim()) { setCheckoutError("Completa objetivo y resultado antes de finalizar."); setReviewing(false); return; }
-    if (e.requiresEvidence && evidence.length === 0) { setCheckoutError("Esta visita requiere evidencia. Adjunta un archivo antes de finalizar."); setReviewing(false); return; }
-    setCheckoutError(a.completeCheckOut(e, { objective, result, findings }));
+    const error = validarCierreManual(objective, {resultado: result,numeroFactura,folioPapeleta,clienteNoAtendio:result==="CLIENTE_NO_ATENDIO"});
+    if (error) { setCheckoutError(error); setReviewing(false); return; }
+    setCheckoutError(a.completeCheckOut(e, { objective, result: resultadoDerivado(objective,{numeroFactura,folioPapeleta,clienteNoAtendio:result==="CLIENTE_NO_ATENDIO"}) ?? result, findings, numeroFactura, folioPapeleta }));
   };
   const attachFiles = (files: FileList | null) => {
     if (!files) return;
@@ -140,7 +145,7 @@ export const EventDetailDialog = () => {
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: "100%" }}>
           <Button variant="outlined" onClick={close} sx={closeBtnSx}>Cancelar</Button>
           <Box>
-            {canCheckIn && <Button variant="contained" onClick={() => a.startCheckIn(e)} sx={saveBtnSx}>Iniciar Check-in</Button>}
+            {canCheckIn && <Button variant="contained" onClick={() => { if (!objective) { setCheckoutError("Selecciona el objetivo de la visita antes de iniciar."); return; } setCheckoutError(null); a.startCheckIn(e,objective); }} sx={saveBtnSx}>Iniciar Check-in</Button>}
             {canCheckOut && <Button variant="contained" onClick={() => { if (reviewing) doCheckOut(); else {setCheckoutError(null);setReviewing(true);} }} sx={saveBtnSx}>{reviewing ? "Confirmar Check-out" : "Revisar y finalizar"}</Button>}
           </Box>
         </Stack>
@@ -182,29 +187,34 @@ export const EventDetailDialog = () => {
       </Box>
       {e.description && <Fact label="Detalle" value={e.description} />}
 
-      {e.status === "Check-in activo" && (
+      {(canCheckIn || e.status === "Check-in activo") && (
         <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${ColorsEpico.ColorLightBlueishGray}` }}>
           <Typography fontSize={FontSizesEnum.Delta} fontWeight={FontWeightEnum.Bold} sx={{ mb: 0.5 }}>Visita en curso</Typography>
-          <Hint>El Check-in ya fue registrado. Para cerrar la visita, captura objetivo y resultado. El prototipo no carga opciones dummy mientras negocio confirma el catálogo definitivo para estos campos.</Hint>
+          <Hint>{canCheckIn ? "Selecciona el objetivo antes de iniciar Check-in." : "Al finalizar, registra el resultado. Los hallazgos y productos negados son opcionales."}</Hint>
           <Stack spacing={1.5} sx={{ mt: 1.5 }}>
             <TextField
               fullWidth
               required
               size="small"
               label="Objetivo de la visita"
-              placeholder="Captura el objetivo de la visita"
+              select
               value={objective}
-              onChange={(x) => setObjective(x.target.value)}
-            />
-            <TextField
-              fullWidth
-              required
-              size="small"
-              label="Resultado de la visita"
-              placeholder="Captura el resultado de la visita"
-              value={result}
-              onChange={(x) => setResult(x.target.value)}
-            />
+              onChange={(x) => {setObjective(x.target.value);setResult("");setNumeroFactura("");setFolioPapeleta("");}}
+              disabled={!canCheckIn}
+            >
+              {OBJETIVOS_VISITA.map(item=><MenuItem key={item.codigo} value={item.codigo}>{item.nombre}</MenuItem>)}
+            </TextField>
+            {!canCheckIn && <>
+              <TextField fullWidth select required size="small" label="Resultado de la visita"
+                value={result} onChange={ev=>setResult(ev.target.value)}>
+                {resultadosSeleccionables(objective).map(item=><MenuItem key={item.codigo} value={item.codigo}>{item.nombre}</MenuItem>)}
+                {(objective==="COBRANZA"||objective==="GARANTIA_Y_DEVOLUCIONES") &&
+                  <MenuItem value="CLIENTE_ATENDIO" disabled>Cliente atendió (automático con comprobante)</MenuItem>}
+              </TextField>
+              {result!=="CLIENTE_NO_ATENDIO" && objective==="COBRANZA" && <TextField fullWidth required size="small" label="Número de factura pagada" value={numeroFactura} onChange={ev=>setNumeroFactura(ev.target.value)} />}
+              {result!=="CLIENTE_NO_ATENDIO" && objective==="GARANTIA_Y_DEVOLUCIONES" && <TextField fullWidth required size="small" label="Folio de papeleta" value={folioPapeleta} onChange={ev=>setFolioPapeleta(ev.target.value)} />}
+              {(objective==="COBRANZA"||objective==="GARANTIA_Y_DEVOLUCIONES") && (numeroFactura.trim()||folioPapeleta.trim()) && <Alert severity="info">Resultado automático: Cliente atendió</Alert>}
+            </>}
             <TextField
               fullWidth
               multiline
@@ -232,7 +242,9 @@ export const EventDetailDialog = () => {
             {reviewing && <Alert severity="info" variant="outlined">
               <b>Revisar y finalizar:</b> confirma los datos antes del Check-out.
               <Box>Objetivo: {objective || "Sin capturar"}</Box>
-              <Box>Resultado: {result || "Sin capturar"}</Box>
+              <Box>Resultado: {resultadoDerivado(objective,{numeroFactura,folioPapeleta,clienteNoAtendio:result==="CLIENTE_NO_ATENDIO"}) || result || "Sin capturar"}</Box>
+              {numeroFactura && <Box>Factura: {numeroFactura}</Box>}
+              {folioPapeleta && <Box>Papeleta: {folioPapeleta}</Box>}
               <Box>Hallazgos: {findings || "Sin notas"}</Box>
               <Box>Evidencias: {evidence.length} archivo(s) seleccionados.</Box>
               <Button size="small" onClick={()=>setReviewing(false)}>Volver a editar</Button>
