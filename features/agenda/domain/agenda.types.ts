@@ -37,6 +37,8 @@ export interface AgendaEvent {
   objective?: string;
   result?: string;
   findings?: string;
+  numeroFactura?: string;
+  folioPapeleta?: string;
   locationStatus?: "En rango" | "Fuera de rango" | "Sin ubicación válida";
   automaticClose?: boolean;
 }
