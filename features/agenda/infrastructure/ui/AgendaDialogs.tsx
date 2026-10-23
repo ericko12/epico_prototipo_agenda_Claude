@@ -11,7 +11,7 @@ import { FontWeightEnum } from "@/features/common/domain/enums/FontWeight";
 import { useAgenda } from "@/features/agenda/application/AgendaContext";
 import { clientId, normalize } from "@/features/agenda/domain/agenda.data";
 import { ActivityType } from "@/features/agenda/domain/agenda.types";
-import { OBJETIVOS_VISITA, RESULTADOS_VISITA, resultadosSeleccionables, resultadoDerivado, validarCierreManual } from "@/src/lib/catalogosAgendaVisitas";
+import { OBJETIVOS_VISITA, resultadosSeleccionables, resultadoDerivado, validarCierreManual } from "@/src/lib/catalogosAgendaVisitas";
 import { EpicoLabel, Hint, statusVariant } from "./shared";
 
 const closeBtnSx = { borderRadius: "4px", minHeight: "32px", fontWeight: FontWeightEnum.Medium, color: ColorsEpico.ColorDarkCharcoal, borderColor: ColorsEpico.ColorGrayNeutral, fontSize: FontSizesEnum.Gamma };
@@ -206,7 +206,7 @@ export const EventDetailDialog = () => {
             </TextField>
             {!canCheckIn && <>
               <TextField fullWidth select required size="small" label="Resultado de la visita"
-                value={result} onChange={ev=>setResult(ev.target.value)}>
+                value={result} onChange={ev=>{setResult(ev.target.value);if(ev.target.value==="CLIENTE_NO_ATENDIO"){setNumeroFactura("");setFolioPapeleta("");}}}>
                 {resultadosSeleccionables(objective).map(item=><MenuItem key={item.codigo} value={item.codigo}>{item.nombre}</MenuItem>)}
                 {(objective==="COBRANZA"||objective==="GARANTIA_Y_DEVOLUCIONES") &&
                   <MenuItem value="CLIENTE_ATENDIO" disabled>Cliente atendió (automático con comprobante)</MenuItem>}
