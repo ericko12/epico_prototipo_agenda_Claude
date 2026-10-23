@@ -206,7 +206,7 @@ function useAgendaState() {
     setCancelTarget(null); setDetail({ event: null });
     setSnack({ severity: "info", msg: `Evento cancelado: ${e.title} (${e.time}).` });
   };
-  const canEditEvent = (e: AgendaEvent) => !!e && canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre automático", "Ejecutada"].includes(e.status);
+  const canEditEvent = (e: AgendaEvent) => !!e && events.some(x=>x.id===e.id) && canEdit && e.kind === "planned" && !e.absence && !["Cancelada", "Check-in activo", "Check-out realizado", "Cierre automático", "Ejecutada"].includes(e.status);
 
   const rescheduleEvent = (e: AgendaEvent, date: string, time: string): boolean => {
     if (!canEditEvent(e)) {
@@ -270,6 +270,8 @@ function useAgendaState() {
     const updated: AgendaEvent = {
       ...e,
       id: `execution-${now}`,
+      createdBy: actorName(),
+      createdAt: nowMx(),
       plannedEventId: events.some(x=>x.id===e.id) ? e.id : undefined,
       executionCode: 'VISITA_INICIADA',
       origin: e.origin ?? 'planeada',
@@ -342,7 +344,7 @@ function useAgendaState() {
   const startFromClient = (client: Client) => {
     if (role !== 'advisor') return;
     const planned = events.find(e=>e.title===client[0] && e.address===client[1] && e.origin!=='no planeada' && canExecuteVisit(e));
-    setDetail({event:planned ?? {id:`draft-${Date.now()}`,title:client[0],address:client[1],date:todayIso(),time:currentLocalTime(),duration:30,kind:'planned',status:'Programada',activityType:'visit',tipoEventoCodigo:'AGENDA',origin:'no planeada'}});
+    setDetail({event:planned ?? {id:`draft-${Date.now()}`,title:client[0],address:client[1],date:todayIso(),time:currentLocalTime(),duration:30,kind:'planned',status:'Programada',activityType:'visit',tipoEventoCodigo:'AGENDA',origin:'no planeada',createdBy:actorName(),createdAt:nowMx()}});
   };
   return {
     startFromClient, profiles, owner, setOwner, profile, events, clients, role, setRole, scope, setScope, managerCanEdit, setManagerCanEdit, detailVisibility, setDetailVisibility,

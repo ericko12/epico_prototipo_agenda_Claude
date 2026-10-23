@@ -208,13 +208,13 @@ export const EventDetailDialog = () => {
               {OBJETIVOS_VISITA.map(item=><MenuItem key={item.codigo} value={item.codigo}>{item.nombre}</MenuItem>)}
             </TextField>
             {!canCheckIn && <>
-              {(objective==='COBRANZA'||objective==='GARANTIA_Y_DEVOLUCIONES') ? <FormControlLabel control={<Checkbox checked={result==='CLIENTE_NO_ATENDIO'} onChange={ev=>{setResult(ev.target.checked?'CLIENTE_NO_ATENDIO':'');setNumeroFactura('');setFolioPapeleta('');}} />} label="Cliente no atendió" /> : <TextField fullWidth select required size="small" label="Resultado de la visita"
-                value={result} onChange={ev=>{setResult(ev.target.value);if(ev.target.value==="CLIENTE_NO_ATENDIO"){setNumeroFactura("");setFolioPapeleta("");}}}>
+              {(objective==='COBRANZA'||objective==='GARANTIA_Y_DEVOLUCIONES') ? <FormControlLabel control={<Checkbox checked={result==='CLIENTE_NO_ATENDIO'} onChange={ev=>{setCheckoutError(null);setResult(ev.target.checked?'CLIENTE_NO_ATENDIO':'');setNumeroFactura('');setFolioPapeleta('');}} />} label="Cliente no atendió" /> : <TextField fullWidth select required size="small" label="Resultado de la visita"
+                value={result} onChange={ev=>{setCheckoutError(null);setResult(ev.target.value);if(ev.target.value==="CLIENTE_NO_ATENDIO"){setNumeroFactura("");setFolioPapeleta("");}}}>
                 {resultadosSeleccionables(objective).map(item=><MenuItem key={item.codigo} value={item.codigo}>{item.nombre}</MenuItem>)}
 
               </TextField>}
-              {result!=="CLIENTE_NO_ATENDIO" && objective==="COBRANZA" && <TextField fullWidth required size="small" label="Número de factura pagada" value={numeroFactura} onChange={ev=>setNumeroFactura(ev.target.value)} />}
-              {result!=="CLIENTE_NO_ATENDIO" && objective==="GARANTIA_Y_DEVOLUCIONES" && <TextField fullWidth required size="small" label="Folio de papeleta" value={folioPapeleta} onChange={ev=>setFolioPapeleta(ev.target.value)} />}
+              {result!=="CLIENTE_NO_ATENDIO" && objective==="COBRANZA" && <TextField fullWidth required size="small" label="Número de factura pagada" value={numeroFactura} onChange={ev=>{setCheckoutError(null);setNumeroFactura(ev.target.value);}} />}
+              {result!=="CLIENTE_NO_ATENDIO" && objective==="GARANTIA_Y_DEVOLUCIONES" && <TextField fullWidth required size="small" label="Folio de papeleta" value={folioPapeleta} onChange={ev=>{setCheckoutError(null);setFolioPapeleta(ev.target.value);}} />}
               {(objective==="COBRANZA"||objective==="GARANTIA_Y_DEVOLUCIONES") && (numeroFactura.trim()||folioPapeleta.trim()) && <Alert severity="info">Resultado automático: Cliente atendió</Alert>}
             </>}
             {!canCheckIn && <TextField
